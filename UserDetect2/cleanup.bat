@@ -1,0 +1,12 @@
+@echo off
+del *.dcu
+del *.cfg
+del *.~*
+del Plugins\*.dcu
+del Plugins\*.cfg
+del Plugins\*.~*
+del vcl\*.dcu
+del vcl\*.~*
+del devcpp_plugins\*.o
+del devcpp_plugins\*.a
+del devcpp_plugins\Makefile.win

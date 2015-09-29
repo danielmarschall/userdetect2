@@ -1,0 +1,4 @@
+Tested with
+
+- Windows 2000 SP4
+- Windows 95b + IE4 (with and without profile usage)

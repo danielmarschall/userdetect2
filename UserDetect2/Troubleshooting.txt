@@ -1,0 +1,24 @@
+Troubleshooting
+---------------
+
+Error message "The plugin "Plugins\<Plugin1>.dll" and the plugin "Plugins\<Plugin2>.dll" have the same identification GUID. The latter will not be loaded.
+
+This error message can have 2 reasons:
+
+1. You have the same plugin twice, with different file names. In this case, you should delete on of these files. You might want to keep the file with the highest version number and/or modification date.
+
+2. The plugin developer accidently used a GUID twice, or didn't change the GUID while using a code template. In this case you have to create a workaround.
+
+Create a new INI file with the name Plugins\<Name>.ini where <Name> is the filename of one of the conflicting plugins. For example, if the DLL file is named Plugins\Example.dll , the INI file would be named Plugins\Example.ini . This INI file should have following contents:
+
+[Compatibility]
+OverrideGUID={936DA01F-9ABD-4D9D-80C7-02AF85C822A8}
+
+Where <GUID> is a GUID in the format {xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}.
+
+You can generate a new GUID at this website:
+https://www.viathinksoft.de/~daniel-marschall/tools/uuid_mac_decoder/interprete_uuid.php?uuid=CREATE
+
+You have to copy the field "Your UUID" and add curly braces around it.
+
+Please also contact the plugin authors and inform him about the issue.

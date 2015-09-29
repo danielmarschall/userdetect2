@@ -1,0 +1,11 @@
+(proofread)
+
+RISD -> RIOD
+
+WICHTIG: methodname != dllname
+
+MAC -> LAN_MAC
+
+autoplay->autorun? (prior to windows ...)
+
+include troubleshooting

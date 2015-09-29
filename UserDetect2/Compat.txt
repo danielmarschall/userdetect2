@@ -1,0 +1,4 @@
+
+DHCP_* plugin: Not compatible with Windows NT4 SP6
+Gateway* plugin: Not compatible with Windows NT4 SP6
+LAN_IP plugin: Not compatible with Windows NT4 SP6
