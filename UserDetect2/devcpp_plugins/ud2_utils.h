@@ -4,6 +4,8 @@
 #include <windows.h>
 #include <assert.h>
 
+#include "ud2_api.h"
+
 // #define USE_OLE32
 
 #ifdef USE_OLE32
@@ -54,18 +56,17 @@ const GUID _StringToGUID(const char* szGUID) {
 }
 #endif
 
-UD2_STATUSCODE __WRITESTR_W(LPWSTR lpDest, DWORD cchDestSize, LPCWSTR lpSrc) {
-	 if (wcslen(lpSrc) > cchDestSize-1) return UD2_STATUS_BUFFER_TOO_SMALL;
-	 wcscpy(lpDest, lpSrc);
-	 return UD2_STATUS_OK;
+BOOL UD2_IsMultilineW(LPCWSTR lpSrc) {
+	return wcschr(lpSrc, UD2_MULTIPLE_ITEMS_DELIMITER) != NULL;
+	// return wcspbrk(lpSrc, L"\r\n") != NULL;
 }
 
-/*
-UD2_STATUSCODE __WRITESTR_A(LPSTR lpDest, DWORD cchDestSize, LPCSTR lpSrc) {
-	 if (strlen(lpSrc) > cchDestSize-1) return UD2_STATUS_BUFFER_TOO_SMALL;
-	 strcpy(lpDest, lpSrc);
-	 return UD2_STATUS_OK;
+UD2_STATUS UD2_WriteStrW(LPWSTR lpDest, DWORD cchDestSize, LPCWSTR lpSrc) {
+	if (wcslen(lpSrc) > cchDestSize-1) return UD2_STATUS_ERROR_BUFFER_TOO_SMALL;
+	wcscpy(lpDest, lpSrc);
+	if (wcslen(lpSrc) == 0) return UD2_STATUS_NOTAVAIL_UNSPECIFIED;
+	if (UD2_IsMultilineW(lpSrc)) return UD2_STATUS_OK_MULTILINE;
+	return UD2_STATUS_OK_SINGLELINE;
 }
-*/
 
 #endif

@@ -18,20 +18,20 @@ begin
   result := PLUGIN_GUID;
 end;
 
-function IdentificationStringW(lpIdentifier: LPWSTR; cchSize: DWORD): UD2_STATUSCODE; cdecl;
+function IdentificationStringW(lpIdentifier: LPWSTR; cchSize: DWORD): UD2_STATUS; cdecl;
 var
   sl: TStringList;
 begin
   sl := TStringList.Create;
   try
     GetGatewayIPAddressList(sl);
-    result := WriteStringListToPointerW(lpIdentifier, cchSize, sl);
+    result := UD2_WriteStringListToPointerW(lpIdentifier, cchSize, sl);
   finally
     sl.Free;
   end;
 end;
 
-function PluginNameW(lpPluginName: LPWSTR; cchSize: DWORD; wLangID: LANGID): UD2_STATUSCODE; cdecl;
+function PluginNameW(lpPluginName: LPWSTR; cchSize: DWORD; wLangID: LANGID): UD2_STATUS; cdecl;
 var
   stPluginName: WideString;
   primaryLangID: Byte;
@@ -41,30 +41,30 @@ begin
     stPluginName := 'IP-Adressen der Gateways'
   else
     stPluginName := 'Gateway IP addresses';
-  result := WritePascalStringToPointerW(lpPluginName, cchSize, stPluginName);
+  result := UD2_WritePascalStringToPointerW(lpPluginName, cchSize, stPluginName);
 end;
 
-function PluginVendorW(lpPluginVendor: LPWSTR; cchSize: DWORD; wLangID: LANGID): UD2_STATUSCODE; cdecl;
+function PluginVendorW(lpPluginVendor: LPWSTR; cchSize: DWORD; wLangID: LANGID): UD2_STATUS; cdecl;
 begin
-  result := WritePascalStringToPointerW(lpPluginVendor, cchSize, 'ViaThinkSoft');
+  result := UD2_WritePascalStringToPointerW(lpPluginVendor, cchSize, 'ViaThinkSoft');
 end;
 
-function PluginVersionW(lpPluginVersion: LPWSTR; cchSize: DWORD; wLangID: LANGID): UD2_STATUSCODE; cdecl;
+function PluginVersionW(lpPluginVersion: LPWSTR; cchSize: DWORD; wLangID: LANGID): UD2_STATUS; cdecl;
 begin
-  result := WritePascalStringToPointerW(lpPluginVersion, cchSize, '1.0');
+  result := UD2_WritePascalStringToPointerW(lpPluginVersion, cchSize, '1.0');
 end;
 
-function IdentificationMethodNameW(lpIdentificationMethodName: LPWSTR; cchSize: DWORD): UD2_STATUSCODE; cdecl;
+function IdentificationMethodNameW(lpIdentificationMethodName: LPWSTR; cchSize: DWORD): UD2_STATUS; cdecl;
 var
   stIdentificationMethodName: WideString;
 begin
   stIdentificationMethodName := 'GatewayIP';
-  result := WritePascalStringToPointerW(lpIdentificationMethodName, cchSize, stIdentificationMethodName);
+  result := UD2_WritePascalStringToPointerW(lpIdentificationMethodName, cchSize, stIdentificationMethodName);
 end;
 
-function CheckLicense(lpReserved: LPVOID): UD2_STATUSCODE; cdecl;
+function CheckLicense(lpReserved: LPVOID): UD2_STATUS; cdecl;
 begin
-  result := UD2_STATUS_OK;
+  result := UD2_STATUS_OK_LICENSED;
 end;
 
 exports

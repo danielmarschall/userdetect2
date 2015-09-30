@@ -10,6 +10,9 @@ unit UD2_Main;
 // TODO: geticon funktion in ud2_obj.pas?
 // TODO (idee): ein plugin kann mehrere methodnames haben?
 // TODO: möglichkeit, Task Definition File neu zu laden, nach änderungen die man durchgeführt hat
+// TODO (idee): lahme DLLs abschießen beim start (per GUI)
+// TODO: splash screen wegen DLL load
+// TODO: nt4 compat
 
 interface
 
@@ -101,7 +104,7 @@ implementation
 {$R *.dfm}
 
 uses
-  ShellAPI, Clipbrd, UD2_Utils, UD2_TaskProperties;
+  ShellAPI, Clipbrd, Math, AlphaNumSort, UD2_Utils, UD2_TaskProperties;
 
 type
   TUD2ListViewEntry = class(TObject)
@@ -324,6 +327,8 @@ begin
 end;
 
 procedure TUD2MainForm.LoadLoadedPluginList;
+resourcestring
+  LNG_MS = '%dms';
 var
   i: integer;
   pl: TUD2Plugin;
@@ -339,6 +344,7 @@ begin
       SubItems.Add(pl.PluginName);
       SubItems.Add(pl.PluginVersion);
       SubItems.Add(pl.IdentificationMethodName);
+      SubItems.Add(Format(LNG_MS, [Max(1,pl.time)])); // at least show 1ms, otherwise it would be unloggical
       SubItems.Add(pl.PluginGUIDString);
     end;
   end;
@@ -483,12 +489,12 @@ begin
   ListView := Sender as TVTSListView;
   if ListView.CurSortedColumn = 0 then
   begin
-    Compare := CompareText(Item1.Caption, Item2.Caption);
+    Compare := AlphaNumCompare(Item1.Caption, Item2.Caption);
   end
   else
   begin
-    Compare := CompareText(Item1.SubItems[ListView.CurSortedColumn-1],
-                           Item2.SubItems[ListView.CurSortedColumn-1]);
+    Compare := AlphaNumCompare(Item1.SubItems[ListView.CurSortedColumn-1],
+                               Item2.SubItems[ListView.CurSortedColumn-1]);
   end;
   if ListView.CurSortedDesc then Compare := -Compare;
 end;

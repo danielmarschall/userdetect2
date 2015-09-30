@@ -9,6 +9,7 @@ uses
   UD2_Obj in 'UD2_Obj.pas',
   UD2_Utils in 'UD2_Utils.pas',
   VTSCompat in 'vcl\VTSCompat.pas',
+  AlphaNumSort in 'vcl\AlphaNumSort.pas',
   PatchU in 'vcl\PatchU.pas';
 
 {$R WindowsXP.res}

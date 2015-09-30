@@ -3,7 +3,7 @@ object UD2MainForm: TUD2MainForm
   Top = 177
   Width = 784
   Height = 440
-  ActiveControl = Memo1
+  ActiveControl = ListView2
   Caption = 'ViaThinkSoft UserDetect2'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -22,9 +22,9 @@ object UD2MainForm: TUD2MainForm
     Top = 0
     Width = 768
     Height = 402
-    ActivePage = TabSheet5
+    ActivePage = TabSheet4
     Align = alClient
-    TabIndex = 4
+    TabIndex = 3
     TabOrder = 0
     object TasksTabSheet: TTabSheet
       Caption = 'Tasks'
@@ -162,6 +162,9 @@ object UD2MainForm: TUD2MainForm
           item
             Caption = 'Identification method name'
             Width = 100
+          end
+          item
+            Caption = 'Load time'
           end
           item
             Caption = 'GUID'
