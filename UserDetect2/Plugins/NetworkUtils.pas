@@ -29,11 +29,12 @@ var
   BufLen: Cardinal;
 begin
   BufLen := SizeOf(IP_ADAPTER_INFO);
-  GetAdaptersInfo(nil, @BufLen);
+  Result := GetAdaptersInfo(nil, @BufLen);
+  if Result <> ERROR_SUCCESS then Exit;
   pAdapterInfo := AllocMem(BufLen);
   try
     Result := GetAdaptersInfo(pAdapterInfo, @BufLen);
-    if not Result = ERROR_SUCCESS then Exit;
+    if Result <> ERROR_SUCCESS then Exit;
     while pAdapterInfo <> nil do
     begin
       addrStr := pAdapterInfo^.IpAddressList;
@@ -59,11 +60,12 @@ var
   BufLen: Cardinal;
 begin
   BufLen := SizeOf(IP_ADAPTER_INFO);
-  GetAdaptersInfo(nil, @BufLen);
+  Result := GetAdaptersInfo(nil, @BufLen);
+  if Result <> ERROR_SUCCESS then Exit;
   pAdapterInfo := AllocMem(BufLen);
   try
     Result := GetAdaptersInfo(pAdapterInfo, @BufLen);
-    if not Result = ERROR_SUCCESS then Exit;
+    if Result <> ERROR_SUCCESS then Exit;
     while pAdapterInfo <> nil do
     begin
       addrStr := pAdapterInfo^.DhcpServer;
@@ -89,11 +91,12 @@ var
   BufLen: Cardinal;
 begin
   BufLen := SizeOf(IP_ADAPTER_INFO);
-  GetAdaptersInfo(nil, @BufLen);
+  Result := GetAdaptersInfo(nil, @BufLen);
+  if Result <> ERROR_SUCCESS then Exit;
   pAdapterInfo := AllocMem(BufLen);
   try
     Result := GetAdaptersInfo(pAdapterInfo, @BufLen);
-    if not Result = ERROR_SUCCESS then Exit;
+    if Result <> ERROR_SUCCESS then Exit;
     while pAdapterInfo <> nil do
     begin
       addrStr := pAdapterInfo^.GatewayList;

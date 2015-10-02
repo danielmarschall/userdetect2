@@ -23,17 +23,35 @@ var
   sl, sl2: TStringList;
   i: integer;
   ip, mac: string;
+  ec: DWORD;
 begin
   sl := TStringList.Create;
   sl2 := TStringList.Create;
   try
-    GetDHCPIPAddressList(sl);
+    ec := GetDHCPIPAddressList(sl);
+    if ec = ERROR_NOT_SUPPORTED then
+    begin
+      result := UD2_STATUS_NOTAVAIL_OS_NOT_SUPPORTED;
+      Exit;
+    end
+    else if ec <> ERROR_SUCCESS then
+    begin
+      result := UD2_STATUS_NOTAVAIL_API_CALL_FAILURE;
+      Exit;
+    end;
+
     for i := 0 to sl.Count-1 do
     begin
       ip := sl.Strings[i];
-      if (GetMACAddress(ip, mac) = S_OK) and
-         (mac <> '') and
-         (sl2.IndexOf(mac) = -1) then
+      ec := GetMACAddress(ip, mac);
+      if ec = ERROR_NOT_SUPPORTED then
+      begin
+        result := UD2_STATUS_NOTAVAIL_OS_NOT_SUPPORTED;
+        Exit;
+      end
+      else if (ec = S_OK) and
+              (mac <> '') and
+              (sl2.IndexOf(mac) = -1) then
       begin
         sl2.add(mac);
       end;
@@ -81,6 +99,12 @@ begin
   result := UD2_STATUS_OK_LICENSED;
 end;
 
+function DescribeOwnStatusCodeW(lpErrorDescription: LPWSTR; cchSize: DWORD; statusCode: UD2_STATUS; wLangID: LANGID): BOOL; cdecl;
+begin
+  // This function does not use non-generic status codes
+  result := FALSE;
+end;
+
 exports
   PluginInterfaceID         name mnPluginInterfaceID,
   PluginIdentifier          name mnPluginIdentifier,
@@ -89,6 +113,7 @@ exports
   PluginVersionW            name mnPluginVersionW,
   IdentificationMethodNameW name mnIdentificationMethodNameW,
   IdentificationStringW     name mnIdentificationStringW,
-  CheckLicense              name mnCheckLicense;
+  CheckLicense              name mnCheckLicense,
+  DescribeOwnStatusCodeW    name mnDescribeOwnStatusCodeW;
 
 end.

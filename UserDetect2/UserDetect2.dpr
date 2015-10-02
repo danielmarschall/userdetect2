@@ -7,10 +7,7 @@ uses
   UD2_PluginIntf in 'UD2_PluginIntf.pas',
   UD2_PluginUtils in 'UD2_PluginUtils.pas',
   UD2_Obj in 'UD2_Obj.pas',
-  UD2_Utils in 'UD2_Utils.pas',
-  VTSCompat in 'vcl\VTSCompat.pas',
-  AlphaNumSort in 'vcl\AlphaNumSort.pas',
-  PatchU in 'vcl\PatchU.pas';
+  UD2_Utils in 'UD2_Utils.pas';
 
 {$R WindowsXP.res}
 

@@ -21,6 +21,7 @@ const
   mnCheckLicense              = 'CheckLicense';
   mnIdentificationMethodNameW = 'IdentificationMethodNameW';
   mnIdentificationStringW     = 'IdentificationStringW';
+  mnDescribeOwnStatusCodeW    = 'DescribeOwnStatusCodeW';
 
 {$IF not Declared(LPVOID)}
 type
@@ -76,6 +77,7 @@ type
   TFuncCheckLicense = function(lpReserved: LPVOID): UD2_STATUS; cdecl;
   TFuncIdentificationMethodNameW = function(lpIdentificationMethodName: LPWSTR; cchSize: DWORD): UD2_STATUS; cdecl;
   TFuncIdentificationStringW = function(lpIdentifier: LPWSTR; cchSize: DWORD): UD2_STATUS; cdecl;
+  TFuncDescribeOwnStatusCodeW = function(lpErrorDescription: LPWSTR; cchSize: DWORD; statusCode: UD2_STATUS; wLangID: LANGID): BOOL; cdecl;
 
 const
   UD2_MULTIPLE_ITEMS_DELIMITER = #10;

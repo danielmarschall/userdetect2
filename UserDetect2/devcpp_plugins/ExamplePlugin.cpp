@@ -32,3 +32,8 @@ UD2_API UD2_STATUS IdentificationMethodNameW(LPWSTR lpIdentificationMethodName, 
 UD2_API UD2_STATUS IdentificationStringW(LPWSTR lpIdentifier, DWORD cchSize) {
 	 return UD2_WriteStrW(lpIdentifier, cchSize, L"Example");
 }
+
+UD2_API BOOL DescribeOwnStatusCodeW(LPWSTR lpErrorDescription, DWORD cchSize, UD2_STATUS statusCode, LANGID wLangID) {
+	  // This function does not use non-generic status codes
+	return FALSE;
+}

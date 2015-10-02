@@ -164,10 +164,16 @@ object UD2MainForm: TUD2MainForm
             Width = 100
           end
           item
+            Caption = 'Detected IDs'
+          end
+          item
             Caption = 'Load time'
           end
           item
-            Caption = 'GUID'
+            Caption = 'Identification Status'
+          end
+          item
+            Caption = 'GUID of Plugin'
             Width = 100
           end>
         ReadOnly = True

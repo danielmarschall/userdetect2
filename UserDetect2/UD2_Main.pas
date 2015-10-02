@@ -10,15 +10,17 @@ unit UD2_Main;
 // TODO: geticon funktion in ud2_obj.pas?
 // TODO (idee): ein plugin kann mehrere methodnames haben?
 // TODO: möglichkeit, Task Definition File neu zu laden, nach änderungen die man durchgeführt hat
+// TODO: möglichkeit, plugins neu zu laden
 // TODO (idee): lahme DLLs abschießen beim start (per GUI)
-// TODO: splash screen wegen DLL load
-// TODO: nt4 compat
+// TODO: splash screen wegen ggf. langer DLL load zeit
 
 interface
 
 {$IF CompilerVersion >= 25.0}
 {$LEGACYIFEND ON}
 {$IFEND}
+
+{$INCLUDE 'UserDetect2.inc'}
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
@@ -344,7 +346,9 @@ begin
       SubItems.Add(pl.PluginName);
       SubItems.Add(pl.PluginVersion);
       SubItems.Add(pl.IdentificationMethodName);
+      SubItems.Add(IntToStr(pl.DetectedIdentifications.Count));
       SubItems.Add(Format(LNG_MS, [Max(1,pl.time)])); // at least show 1ms, otherwise it would be unloggical
+      SubItems.Add(pl.IdentificationProcedureStatusCodeDescribed);
       SubItems.Add(pl.PluginGUIDString);
     end;
   end;

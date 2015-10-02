@@ -6,8 +6,10 @@ interface
 {$LEGACYIFEND ON}
 {$IFEND}
 
+{$INCLUDE 'UserDetect2.inc'}
+
 uses
-  Windows, SysUtils, Classes, IniFiles, Contnrs, Dialogs;
+  Windows, SysUtils, Classes, IniFiles, Contnrs, Dialogs, UD2_PluginIntf;
 
 const
   cchBufferSize = 32768;
@@ -23,6 +25,11 @@ type
     PluginVendor: WideString;
     PluginVersion: WideString;
     IdentificationMethodName: WideString;
+
+    // ONLY contains the non-failure status code of IdentificationStringW
+    IdentificationProcedureStatusCode: UD2_STATUS;
+    IdentificationProcedureStatusCodeDescribed: WideString;
+    
     Time: Cardinal;
     function PluginGUIDString: string;
     property DetectedIdentifications: TObjectList{<TUD2IdentificationEntry>}
@@ -46,7 +53,9 @@ type
 
   TUD2 = class(TObject)
   private
+    {$IFDEF CHECK_FOR_SAME_PLUGIN_GUID}
     FGUIDLookup: TStrings;
+    {$ENDIF}
   protected
     FLoadedPlugins: TObjectList{<TUD2Plugin>};
     FIniFile: TMemIniFile;
@@ -68,12 +77,13 @@ type
     function ReadMetatagBool(ShortTaskName, MetatagName: string;
       DefaultVal: string): boolean;
     function GetTaskName(AShortTaskName: string): string;
+    class function GenericErrorLookup(dwStatus: UD2_STATUS): string;
   end;
 
 implementation
 
 uses
-  UD2_PluginIntf, UD2_Utils;
+  UD2_Utils;
 
 type
   TUD2PluginLoader = class(TThread)
@@ -81,7 +91,7 @@ type
     dllFile: string;
     lngID: LANGID;
     procedure Execute; override;
-    procedure HandleDLL;
+    function HandleDLL: boolean;
   public
     pl: TUD2Plugin;
     Errors: TStringList;
@@ -89,7 +99,7 @@ type
     destructor Destroy; override;
   end;
 
-function UD2_ErrorLookup(dwStatus: UD2_STATUS): string;
+class function TUD2.GenericErrorLookup(dwStatus: UD2_STATUS): string;
 resourcestring
   LNG_STATUS_OK_UNSPECIFIED            = 'Unspecified generic success';
   LNG_STATUS_OK_SINGLELINE             = 'Operation successful; one identifier returned';
@@ -186,10 +196,12 @@ procedure TUD2.HandlePluginDir(APluginDir: string);
 Var
   SR: TSearchRec;
   path: string;
-  x: TUD2PluginLoader;
+  pluginLoader: TUD2PluginLoader;
   tob: TObjectList;
   i: integer;
-  sPluginID, v: string;
+  {$IFDEF CHECK_FOR_SAME_PLUGIN_GUID}
+  sPluginID, prevDLL: string;
+  {$ENDIF}
   lngid: LANGID;
 resourcestring
   LNG_PLUGINS_SAME_GUID = 'Attention: The plugin "%s" and the plugin "%s" have the same identification GUID. The latter will not be loaded.';
@@ -221,25 +233,27 @@ begin
 
     for i := 0 to tob.count-1 do
     begin
-      x := tob.items[i] as TUD2PluginLoader;
-      x.WaitFor;
-      Errors.AddStrings(x.Errors);
-      if Assigned(x.pl) then
+      pluginLoader := tob.items[i] as TUD2PluginLoader;
+      pluginLoader.WaitFor;
+      Errors.AddStrings(pluginLoader.Errors);
+      {$IFDEF CHECK_FOR_SAME_PLUGIN_GUID}
+      if Assigned(pluginLoader.pl) then
       begin
-        sPluginID := GUIDToString(x.pl.PluginGUID);
-        v := FGUIDLookup.Values[sPluginID];
-        if (v <> '') and (v <> x.pl.PluginDLL) then
+        sPluginID := GUIDToString(pluginLoader.pl.PluginGUID);
+        prevDLL := FGUIDLookup.Values[sPluginID];
+        if (prevDLL <> '') and (prevDLL <> pluginLoader.pl.PluginDLL) then
         begin
-          Errors.Add(Format(LNG_PLUGINS_SAME_GUID, [v, x.pl.PluginDLL]));
-          x.pl.Free;
+          Errors.Add(Format(LNG_PLUGINS_SAME_GUID, [prevDLL, pluginLoader.pl.PluginDLL]));
+          pluginLoader.pl.Free;
         end
         else
         begin
-          FGUIDLookup.Values[sPluginID] := x.pl.PluginDLL;
-          LoadedPlugins.Add(x.pl);
+          FGUIDLookup.Values[sPluginID] := pluginLoader.pl.PluginDLL;
+          LoadedPlugins.Add(pluginLoader.pl);
         end;
       end;
-      x.Free;
+      {$ENDIF}
+      pluginLoader.Free;
     end;
   finally
     tob.free;
@@ -250,7 +264,9 @@ destructor TUD2.Destroy;
 begin
   FIniFile.Free;
   FLoadedPlugins.Free;
+  {$IFDEF CHECK_FOR_SAME_PLUGIN_GUID}
   FGUIDLookup.Free;
+  {$ENDIF}
   FErrors.Free;
 end;
 
@@ -259,7 +275,9 @@ begin
   FIniFileName := AIniFileName;
   FLoadedPlugins := TObjectList{<TUD2Plugin>}.Create(true);
   FIniFile := TMemIniFile.Create(IniFileName);
+  {$IFDEF CHECK_FOR_SAME_PLUGIN_GUID}
   FGUIDLookup := TStringList.Create;
+  {$ENDIF}
   FErrors := TStringList.Create;
 end;
 
@@ -407,7 +425,7 @@ begin
   inherited;
 end;
 
-procedure TUD2PluginLoader.HandleDLL;
+function TUD2PluginLoader.HandleDLL: boolean;
 var
   sIdentifier: WideString;
   sIdentifiers: TArrayOfString;
@@ -417,7 +435,7 @@ var
   sOverrideGUID: string;
   pluginIDfound: boolean;
   pluginInterfaceID: TGUID;
-  dllHandle: cardinal;
+  dllHandle: Cardinal;
   fPluginInterfaceID: TFuncPluginInterfaceID;
   fPluginIdentifier: TFuncPluginIdentifier;
   fPluginNameW: TFuncPluginNameW;
@@ -426,17 +444,31 @@ var
   fIdentificationMethodNameW: TFuncIdentificationMethodNameW;
   fIdentificationStringW: TFuncIdentificationStringW;
   fCheckLicense: TFuncCheckLicense;
+  fDescribeOwnStatusCodeW: TFuncDescribeOwnStatusCodeW;
   statusCode: UD2_STATUS;
   i: integer;
   starttime, endtime, time: cardinal;
-  loadSuccessful: boolean;
+
+  function _ErrorLookup(statusCode: UD2_STATUS): WideString;
+  var
+    ret: BOOL;
+  begin
+    ret := fDescribeOwnStatusCodeW(@buf, cchBufferSize, statusCode, lngID);
+    if ret then
+    begin
+      result := PWideChar(@buf);
+      Exit;
+    end;
+    result := TUD2.GenericErrorLookup(statusCode);
+  end;
+
 resourcestring
   LNG_DLL_NOT_LOADED = 'Plugin DLL "%s" could not be loaded.';
   LNG_METHOD_NOT_FOUND = 'Method "%s" not found in plugin "%s". The DLL is probably not a valid plugin DLL.';
   LNG_INVALID_PLUGIN = 'The plugin "%s" is not a valid plugin for this program version.';
   LNG_METHOD_FAILURE = 'Error "%s" at method "%s" of plugin "%s".';
 begin
-  loadSuccessful := false;
+  result := false;
   startTime := GetTickCount;
 
   dllHandle := LoadLibrary(PChar(dllFile));
@@ -500,6 +532,13 @@ begin
       Exit;
     end;
 
+    @fDescribeOwnStatusCodeW := GetProcAddress(dllHandle, mnDescribeOwnStatusCodeW);
+    if not Assigned(fDescribeOwnStatusCodeW) then
+    begin
+      Errors.Add(Format(LNG_METHOD_NOT_FOUND, [mnDescribeOwnStatusCodeW, dllFile]));
+      Exit;
+    end;
+
     pl := TUD2Plugin.Create;
     pl.PluginDLL := dllFile;
 
@@ -534,7 +573,7 @@ begin
     statusCode := fCheckLicense(nil);
     if UD2_STATUS_Failed(statusCode) then
     begin
-      Errors.Add(Format(LNG_METHOD_FAILURE, [UD2_ErrorLookup(statusCode), mnCheckLicense, dllFile]));
+      Errors.Add(Format(LNG_METHOD_FAILURE, [_ErrorLookup(statusCode), mnCheckLicense, dllFile]));
       Exit;
     end;
 
@@ -543,7 +582,7 @@ begin
     else if UD2_STATUS_NotAvail(statusCode)   then pl.PluginName := ''
     else
     begin
-      Errors.Add(Format(LNG_METHOD_FAILURE, [UD2_ErrorLookup(statusCode), mnPluginNameW, dllFile]));
+      Errors.Add(Format(LNG_METHOD_FAILURE, [_ErrorLookup(statusCode), mnPluginNameW, dllFile]));
       Exit;
     end;
 
@@ -552,7 +591,7 @@ begin
     else if UD2_STATUS_NotAvail(statusCode)   then pl.PluginVendor := ''
     else
     begin
-      Errors.Add(Format(LNG_METHOD_FAILURE, [UD2_ErrorLookup(statusCode), mnPluginVendorW, dllFile]));
+      Errors.Add(Format(LNG_METHOD_FAILURE, [_ErrorLookup(statusCode), mnPluginVendorW, dllFile]));
       Exit;
     end;
 
@@ -561,7 +600,7 @@ begin
     else if UD2_STATUS_NotAvail(statusCode)   then pl.PluginVersion := ''
     else
     begin
-      Errors.Add(Format(LNG_METHOD_FAILURE, [UD2_ErrorLookup(statusCode), mnPluginVersionW, dllFile]));
+      Errors.Add(Format(LNG_METHOD_FAILURE, [_ErrorLookup(statusCode), mnPluginVersionW, dllFile]));
       Exit;
     end;
 
@@ -570,17 +609,19 @@ begin
     else if UD2_STATUS_NotAvail(statusCode)   then pl.IdentificationMethodName := ''
     else
     begin
-      Errors.Add(Format(LNG_METHOD_FAILURE, [UD2_ErrorLookup(statusCode), mnIdentificationMethodNameW, dllFile]));
+      Errors.Add(Format(LNG_METHOD_FAILURE, [_ErrorLookup(statusCode), mnIdentificationMethodNameW, dllFile]));
       Exit;
     end;
 
     statusCode := fIdentificationStringW(@buf, cchBufferSize);
+    pl.IdentificationProcedureStatusCode := statusCode;
+    pl.IdentificationProcedureStatusCodeDescribed := _ErrorLookup(statusCode);
     if UD2_STATUS_Successful(statusCode) then
     begin
       sIdentifier := PWideChar(@buf);
       if statusCode = UD2_STATUS_OK_MULTILINE then
       begin
-        // Multiple identifiers (e.g. multiple MAC addresses are delimited via #10 )
+        // Multiple identifiers (e.g. multiple MAC addresses are delimited via UD2_MULTIPLE_ITEMS_DELIMITER)
         SetLength(sIdentifiers, 0);
         sIdentifiers := SplitString(UD2_MULTIPLE_ITEMS_DELIMITER, sIdentifier);
         for i := Low(sIdentifiers) to High(sIdentifiers) do
@@ -595,7 +636,8 @@ begin
     end
     else if not UD2_STATUS_NotAvail(statusCode) then
     begin
-      Errors.Add(Format(LNG_METHOD_FAILURE, [UD2_ErrorLookup(statusCode), mnIdentificationStringW, dllFile]));
+      // Errors.Add(Format(LNG_METHOD_FAILURE, [_ErrorLookup(statusCode), mnIdentificationStringW, dllFile]));
+      Errors.Add(Format(LNG_METHOD_FAILURE, [pl.IdentificationProcedureStatusCodeDescribed, mnIdentificationStringW, dllFile]));
       Exit;
     end;
 
@@ -604,9 +646,9 @@ begin
     if endtime < starttime then time := High(Cardinal) - time;
     pl.time := time;
 
-    loadSuccessful := true;
+    result := true;
   finally
-    if not loadSuccessful and Assigned(pl) then FreeAndNil(pl);
+    if not result and Assigned(pl) then FreeAndNil(pl);
     FreeLibrary(dllHandle);
   end;
 end;

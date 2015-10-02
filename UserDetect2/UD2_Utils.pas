@@ -6,6 +6,8 @@ interface
 {$LEGACYIFEND ON}
 {$IFEND}
 
+{$INCLUDE 'UserDetect2.inc'}
+
 uses
   Windows, SysUtils, Dialogs, ShellAPI;
 
@@ -255,11 +257,16 @@ begin
   ZeroMemory(@sei, SizeOf(sei));
   sei.cbSize       := SizeOf(sei);
   sei.lpFile       := PChar(cmdFile);
+  {$IFNDEF PREFER_SHELLEXECUTEEX_MESSAGES}
+  sei.fMask        := SEE_MASK_FLAG_NO_UI;
+  {$ENDIF}
   if cmdArgs <> '' then sei.lpParameters := PChar(cmdArgs);
   if cmdDir  <> '' then sei.lpDirectory  := PChar(cmdDir);
   sei.nShow        := WindowMode;
   if ShellExecuteEx(@sei) then Exit;
+  {$IFNDEF PREFER_SHELLEXECUTEEX_MESSAGES}
   CheckLastOSCall(false);
+  {$ENDIF}
 end;
 
 function GetHTML(AUrl: string): string;

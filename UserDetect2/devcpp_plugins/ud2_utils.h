@@ -44,7 +44,7 @@ const bool StringToGUID(const char* szGUID, GUID* g) {
 	char b[3]; b[2] = 0;	
 	memcpy(&b[0], szGUID+20, 2*sizeof(b[0])); g->Data4[0] = strtol(&b[0], &pEnd, 16);
 	memcpy(&b[0], szGUID+22, 2*sizeof(b[0])); g->Data4[1] = strtol(&b[0], &pEnd, 16);
-	for (int i=0; i<8; ++i) {
+	for (int i=0; i<6; ++i) {
 		memcpy(&b[0], szGUID+25+i*2, 2*sizeof(b[0])); g->Data4[2+i] = strtol(&b[0], &pEnd, 16);
 	}
 	return true;

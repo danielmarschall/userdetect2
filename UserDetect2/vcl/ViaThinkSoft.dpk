@@ -34,6 +34,7 @@ requires
 
 contains
   VTSListView in 'VTSListView.pas',
+  AlphaNumSort in 'AlphaNumSort.pas',
   VTSCompat in 'VTSCompat.pas',
   PatchU in 'PatchU.pas';
 

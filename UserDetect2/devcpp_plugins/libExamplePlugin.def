@@ -1,9 +1,10 @@
 EXPORTS
     CheckLicense @1
-    IdentificationMethodNameW @2
-    IdentificationStringW @3
-    PluginIdentifier @4
-    PluginInterfaceID @5
-    PluginNameW @6
-    PluginVendorW @7
-    PluginVersionW @8
+    DescribeOwnStatusCodeW @2
+    IdentificationMethodNameW @3
+    IdentificationStringW @4
+    PluginIdentifier @5
+    PluginInterfaceID @6
+    PluginNameW @7
+    PluginVendorW @8
+    PluginVersionW @9

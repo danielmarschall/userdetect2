@@ -74,6 +74,12 @@ begin
   result := UD2_STATUS_OK_LICENSED;
 end;
 
+function DescribeOwnStatusCodeW(lpErrorDescription: LPWSTR; cchSize: DWORD; statusCode: UD2_STATUS; wLangID: LANGID): BOOL; cdecl;
+begin
+  // This function does not use non-generic status codes
+  result := FALSE;
+end;
+
 exports
   PluginInterfaceID         name mnPluginInterfaceID,
   PluginIdentifier          name mnPluginIdentifier,
@@ -82,6 +88,7 @@ exports
   PluginVersionW            name mnPluginVersionW,
   IdentificationMethodNameW name mnIdentificationMethodNameW,
   IdentificationStringW     name mnIdentificationStringW,
-  CheckLicense              name mnCheckLicense;
+  CheckLicense              name mnCheckLicense,
+  DescribeOwnStatusCodeW    name mnDescribeOwnStatusCodeW;
 
 end.
