@@ -5,10 +5,9 @@
 
 const char UD2_MULTIPLE_ITEMS_DELIMITER = 0x10;
 
+#include "ud2_guid.h"
 #include "ud2_status.h"
 #include "ud2_utils.h"
-
-#define GUID_USERDETECT2_IDPLUGIN_V1 __GUID("{6C26245E-F79A-416C-8C73-BEA3EC18BB6E}")
 
 #ifdef BUILDING_DLL
 #define UD2_API extern "C" __cdecl __declspec(dllexport)
@@ -25,6 +24,7 @@ UD2_API UD2_STATUS IdentificationMethodNameW(LPWSTR lpIdentificationMethodName, 
 UD2_API UD2_STATUS IdentificationStringW(LPWSTR lpIdentifier, DWORD cchSize);
 UD2_API BOOL DescribeOwnStatusCodeW(LPWSTR lpErrorDescription, DWORD cchSize, UD2_STATUS statusCode, LANGID wLangID);
 
+const GUID GUID_USERDETECT2_IDPLUGIN_V1 = __GUID("{6C26245E-F79A-416C-8C73-BEA3EC18BB6E}");
 #ifdef BUILDING_DLL
 UD2_API GUID PluginInterfaceID() {
 	return GUID_USERDETECT2_IDPLUGIN_V1;	

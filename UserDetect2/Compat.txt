@@ -1,9 +1,0 @@
-
-- - - - - - - - - - - - - - 
-ViaThinkSoft UserDetect2
-Compatibility Issues
-- - - - - - - - - - - - - - 
-
-Windows NT4 SP6
-	Plugins: DHCP_*, Gateway*, LAN_IP
-	not compatible because of GetAdaptersInfo() is not supported.

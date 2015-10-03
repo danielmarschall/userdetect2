@@ -5,7 +5,8 @@ uses
   SysUtils,
   Classes,
   UD2_PluginIntf in '..\UD2_PluginIntf.pas',
-  UD2_PluginUtils in '..\UD2_PluginUtils.pas';
+  UD2_PluginUtils in '..\UD2_PluginUtils.pas',
+  UD2_PluginStatus in '..\UD2_PluginStatus.pas';
 
 {$R *.res}
 

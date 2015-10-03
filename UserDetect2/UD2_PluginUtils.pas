@@ -7,7 +7,7 @@ interface
 {$IFEND}
 
 uses
-  Windows, Classes, UD2_PluginIntf;
+  Windows, Classes, UD2_PluginIntf, UD2_PluginStatus;
 
 function UD2_WritePascalStringToPointerW(lpDestination: LPWSTR; cchSize: DWORD;
   stSource: WideString): UD2_STATUS;
@@ -45,7 +45,7 @@ var
 begin
   if cchSize = 0 then
   begin
-    result := UD2_STATUS_ERROR_INVALID_ARGS;
+    result := UD2_STATUS_FAILURE_INVALID_ARGS;
     Exit;
   end;
 
@@ -58,7 +58,7 @@ begin
   lpDestination[cchCopy] := #0;
 
   if cchSource >= cchSize then
-    result := UD2_STATUS_ERROR_BUFFER_TOO_SMALL
+    result := UD2_STATUS_FAILURE_BUFFER_TOO_SMALL
   else if stSource = '' then
     result := UD2_STATUS_NOTAVAIL_UNSPECIFIED
   else if UD2_IsMultiLineW(stSource) then

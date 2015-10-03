@@ -6,6 +6,7 @@ uses
   Classes,
   UD2_PluginIntf in '..\UD2_PluginIntf.pas',
   UD2_PluginUtils in '..\UD2_PluginUtils.pas',
+  UD2_PluginStatus in '..\UD2_PluginStatus.pas',
   NetworkUtils in 'NetworkUtils.pas';
 
 {$R *.res}
@@ -36,7 +37,7 @@ begin
     end
     else if ec <> ERROR_SUCCESS then
     begin
-      result := UD2_STATUS_NOTAVAIL_API_CALL_FAILURE;
+      result := UD2_STATUS_OSError(ec);
       Exit;
     end;
 

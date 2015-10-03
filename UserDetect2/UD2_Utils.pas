@@ -31,6 +31,7 @@ procedure UD2_RunCMD(cmdLine: string; WindowMode: integer);
 function SplitIconString(IconString: string): TIconFileIdx;
 // function GetHTML(AUrl: string): string;
 procedure VTS_CheckUpdates(VTSID, CurVer: string);
+function FormatOSError(ec: DWORD): string;
 
 implementation
 
@@ -136,12 +137,19 @@ begin
     @Result[1],length(Result)));
 end;
 
-procedure CheckLastOSCall(AThrowException: boolean);
+function FormatOSError(ec: DWORD): string;
 resourcestring
   LNG_UNKNOWN_ERROR = 'Operating system error %d';
+begin
+  result := SysErrorMessage(ec);
+
+  // Some errors have no error message, e.g. error 193 (BAD_EXE_FORMAT) in the German version of Windows 10
+  if result = '' then result := Format(LNG_UNKNOWN_ERROR, [ec]);
+end;
+
+procedure CheckLastOSCall(AThrowException: boolean);
 var
   LastError: Cardinal;
-  sError: string;
 begin
   LastError := GetLastError;
   if LastError <> 0 then
@@ -152,12 +160,7 @@ begin
     end
     else
     begin
-      sError := SysErrorMessage(LastError);
-
-      // Some errors have no error message, e.g. error 193 (BAD_EXE_FORMAT) in the German version of Windows 10
-      if sError = '' then sError := Format(LNG_UNKNOWN_ERROR, [LastError]);
-
-      MessageDlg(sError, mtError, [mbOK], 0);
+      MessageDlg(FormatOSError(LastError), mtError, [mbOK], 0);
     end;
   end;
 end;

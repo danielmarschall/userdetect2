@@ -9,7 +9,8 @@ interface
 {$INCLUDE 'UserDetect2.inc'}
 
 uses
-  Windows, SysUtils, Classes, IniFiles, Contnrs, Dialogs, UD2_PluginIntf;
+  Windows, SysUtils, Classes, IniFiles, Contnrs, Dialogs, UD2_PluginIntf,
+  UD2_PluginStatus;
 
 const
   cchBufferSize = 32768;
@@ -77,7 +78,7 @@ type
     function ReadMetatagBool(ShortTaskName, MetatagName: string;
       DefaultVal: string): boolean;
     function GetTaskName(AShortTaskName: string): string;
-    class function GenericErrorLookup(dwStatus: UD2_STATUS): string;
+    class function GenericErrorLookup(grStatus: UD2_STATUS): string;
   end;
 
 implementation
@@ -99,47 +100,47 @@ type
     destructor Destroy; override;
   end;
 
-class function TUD2.GenericErrorLookup(dwStatus: UD2_STATUS): string;
+class function TUD2.GenericErrorLookup(grStatus: UD2_STATUS): string;
 resourcestring
-  LNG_STATUS_OK_UNSPECIFIED            = 'Unspecified generic success';
-  LNG_STATUS_OK_SINGLELINE             = 'Operation successful; one identifier returned';
-  LNG_STATUS_OK_MULTILINE              = 'Operation successful; multiple identifiers returned';
+  LNG_STATUS_OK_UNSPECIFIED               = 'Unspecified generic success';
+  LNG_STATUS_OK_SINGLELINE                = 'Operation successful; one identifier returned';
+  LNG_STATUS_OK_MULTILINE                 = 'Operation successful; multiple identifiers returned';
 
-  LNG_STATUS_NOTAVAIL_UNSPECIFIED      = 'Unspecified generic "not available" status';
-  LNG_STATUS_NOTAVAIL_OS_NOT_SUPPORTED = 'Operating system not supported';
-  LNG_STATUS_NOTAVAIL_HW_NOT_SUPPORTED = 'Hardware not supported';
-  LNG_STATUS_NOTAVAIL_NO_ENTITIES      = 'No entities to identify';
-  LNG_STATUS_NOTAVAIL_API_CALL_FAILURE = 'An API call failed';
+  LNG_STATUS_NOTAVAIL_UNSPECIFIED         = 'Unspecified generic "not available" status';
+  LNG_STATUS_NOTAVAIL_OS_NOT_SUPPORTED    = 'Operating system not supported';
+  LNG_STATUS_NOTAVAIL_HW_NOT_SUPPORTED    = 'Hardware not supported';
+  LNG_STATUS_NOTAVAIL_NO_ENTITIES         = 'No entities to identify';
+  LNG_STATUS_NOTAVAIL_WINAPI_CALL_FAILURE = 'A Windows API call failed. Message: %s';
 
-  LNG_STATUS_ERROR_UNSPECIFIED         = 'Unspecified generic error';
-  LNG_STATUS_ERROR_BUFFER_TOO_SMALL    = 'The provided buffer is too small!';
-  LNG_STATUS_ERROR_INVALID_ARGS        = 'The function received invalid arguments!';
-  LNG_STATUS_ERROR_PLUGIN_NOT_LICENSED = 'The plugin is not licensed';
+  LNG_STATUS_ERROR_UNSPECIFIED            = 'Unspecified generic error';
+  LNG_STATUS_ERROR_BUFFER_TOO_SMALL       = 'The provided buffer is too small!';
+  LNG_STATUS_ERROR_INVALID_ARGS           = 'The function received invalid arguments!';
+  LNG_STATUS_ERROR_PLUGIN_NOT_LICENSED    = 'The plugin is not licensed';
 
-  LNG_UNKNOWN_SUCCESS                  = 'Unknown "success" status code %s';
-  LNG_UNKNOWN_NOTAVAIL                 = 'Unknown "not available" status code %s';
-  LNG_UNKNOWN_FAILED                   = 'Unknown "failed" status code %s';
-  LNG_UNKNOWN_STATUS                   = 'Unknown status code with unexpected category: %s';
+  LNG_UNKNOWN_SUCCESS                     = 'Unknown "success" status code %s';
+  LNG_UNKNOWN_NOTAVAIL                    = 'Unknown "not available" status code %s';
+  LNG_UNKNOWN_FAILED                      = 'Unknown "failure" status code %s';
+  LNG_UNKNOWN_STATUS                      = 'Unknown status code with unexpected category: %s';
 begin
-       if dwStatus = UD2_STATUS_OK_UNSPECIFIED            then result := LNG_STATUS_OK_UNSPECIFIED
-  else if dwStatus = UD2_STATUS_OK_SINGLELINE             then result := LNG_STATUS_OK_SINGLELINE
-  else if dwStatus = UD2_STATUS_OK_MULTILINE              then result := LNG_STATUS_OK_MULTILINE
+       if UD2_STATUS_Equal(grStatus, UD2_STATUS_OK_UNSPECIFIED, false)               then result := LNG_STATUS_OK_UNSPECIFIED
+  else if UD2_STATUS_Equal(grStatus, UD2_STATUS_OK_SINGLELINE, false)                then result := LNG_STATUS_OK_SINGLELINE
+  else if UD2_STATUS_Equal(grStatus, UD2_STATUS_OK_MULTILINE, false)                 then result := LNG_STATUS_OK_MULTILINE
 
-  else if dwStatus = UD2_STATUS_NOTAVAIL_UNSPECIFIED      then result := LNG_STATUS_NOTAVAIL_UNSPECIFIED
-  else if dwStatus = UD2_STATUS_NOTAVAIL_OS_NOT_SUPPORTED then result := LNG_STATUS_NOTAVAIL_OS_NOT_SUPPORTED
-  else if dwStatus = UD2_STATUS_NOTAVAIL_HW_NOT_SUPPORTED then result := LNG_STATUS_NOTAVAIL_HW_NOT_SUPPORTED
-  else if dwStatus = UD2_STATUS_NOTAVAIL_NO_ENTITIES      then result := LNG_STATUS_NOTAVAIL_NO_ENTITIES
-  else if dwStatus = UD2_STATUS_NOTAVAIL_API_CALL_FAILURE then result := LNG_STATUS_NOTAVAIL_API_CALL_FAILURE
+  else if UD2_STATUS_Equal(grStatus, UD2_STATUS_NOTAVAIL_UNSPECIFIED, false)         then result := LNG_STATUS_NOTAVAIL_UNSPECIFIED
+  else if UD2_STATUS_Equal(grStatus, UD2_STATUS_NOTAVAIL_OS_NOT_SUPPORTED, false)    then result := LNG_STATUS_NOTAVAIL_OS_NOT_SUPPORTED
+  else if UD2_STATUS_Equal(grStatus, UD2_STATUS_NOTAVAIL_HW_NOT_SUPPORTED, false)    then result := LNG_STATUS_NOTAVAIL_HW_NOT_SUPPORTED
+  else if UD2_STATUS_Equal(grStatus, UD2_STATUS_NOTAVAIL_NO_ENTITIES, false)         then result := LNG_STATUS_NOTAVAIL_NO_ENTITIES
+  else if UD2_STATUS_Equal(grStatus, UD2_STATUS_NOTAVAIL_WINAPI_CALL_FAILURE, false) then result := Format(LNG_STATUS_NOTAVAIL_WINAPI_CALL_FAILURE, [FormatOSError(grStatus.dwExtraInfo)])
 
-  else if dwStatus = UD2_STATUS_ERROR_UNSPECIFIED         then result := LNG_STATUS_ERROR_UNSPECIFIED
-  else if dwStatus = UD2_STATUS_ERROR_BUFFER_TOO_SMALL    then result := LNG_STATUS_ERROR_BUFFER_TOO_SMALL
-  else if dwStatus = UD2_STATUS_ERROR_INVALID_ARGS        then result := LNG_STATUS_ERROR_INVALID_ARGS
-  else if dwStatus = UD2_STATUS_ERROR_PLUGIN_NOT_LICENSED then result := LNG_STATUS_ERROR_PLUGIN_NOT_LICENSED
+  else if UD2_STATUS_Equal(grStatus, UD2_STATUS_FAILURE_UNSPECIFIED, false)          then result := LNG_STATUS_ERROR_UNSPECIFIED
+  else if UD2_STATUS_Equal(grStatus, UD2_STATUS_FAILURE_BUFFER_TOO_SMALL, false)     then result := LNG_STATUS_ERROR_BUFFER_TOO_SMALL
+  else if UD2_STATUS_Equal(grStatus, UD2_STATUS_FAILURE_INVALID_ARGS, false)         then result := LNG_STATUS_ERROR_INVALID_ARGS
+  else if UD2_STATUS_Equal(grStatus, UD2_STATUS_FAILURE_PLUGIN_NOT_LICENSED, false)  then result := LNG_STATUS_ERROR_PLUGIN_NOT_LICENSED
 
-  else if UD2_STATUS_Successful(dwStatus) then result := Format(LNG_UNKNOWN_SUCCESS,  [UD2_STATUS_FormatStatusCode(dwStatus)])
-  else if UD2_STATUS_NotAvail(dwStatus)   then result := Format(LNG_UNKNOWN_NOTAVAIL, [UD2_STATUS_FormatStatusCode(dwStatus)])
-  else if UD2_STATUS_Failed(dwStatus)     then result := Format(LNG_UNKNOWN_FAILED,   [UD2_STATUS_FormatStatusCode(dwStatus)])
-  else                                         result := Format(LNG_UNKNOWN_STATUS,   [UD2_STATUS_FormatStatusCode(dwStatus)]);
+  else if grStatus.wCategory = UD2_STATUSCAT_SUCCESS   then result := Format(LNG_UNKNOWN_SUCCESS,  [UD2_STATUS_FormatStatusCode(grStatus)])
+  else if grStatus.wCategory = UD2_STATUSCAT_NOT_AVAIL then result := Format(LNG_UNKNOWN_NOTAVAIL, [UD2_STATUS_FormatStatusCode(grStatus)])
+  else if grStatus.wCategory = UD2_STATUSCAT_FAILED    then result := Format(LNG_UNKNOWN_FAILED,   [UD2_STATUS_FormatStatusCode(grStatus)])
+  else                                                      result := Format(LNG_UNKNOWN_STATUS,   [UD2_STATUS_FormatStatusCode(grStatus)]);
 end;
 
 { TUD2Plugin }
@@ -571,15 +572,15 @@ begin
     end;
 
     statusCode := fCheckLicense(nil);
-    if UD2_STATUS_Failed(statusCode) then
+    if statusCode.wCategory = UD2_STATUSCAT_FAILED then
     begin
       Errors.Add(Format(LNG_METHOD_FAILURE, [_ErrorLookup(statusCode), mnCheckLicense, dllFile]));
       Exit;
     end;
 
     statusCode := fPluginNameW(@buf, cchBufferSize, lngID);
-         if UD2_STATUS_Successful(statusCode) then pl.PluginName := PWideChar(@buf)
-    else if UD2_STATUS_NotAvail(statusCode)   then pl.PluginName := ''
+         if statusCode.wCategory = UD2_STATUSCAT_SUCCESS   then pl.PluginName := PWideChar(@buf)
+    else if statusCode.wCategory = UD2_STATUSCAT_NOT_AVAIL then pl.PluginName := ''
     else
     begin
       Errors.Add(Format(LNG_METHOD_FAILURE, [_ErrorLookup(statusCode), mnPluginNameW, dllFile]));
@@ -587,8 +588,8 @@ begin
     end;
 
     statusCode := fPluginVendorW(@buf, cchBufferSize, lngID);
-         if UD2_STATUS_Successful(statusCode) then pl.PluginVendor := PWideChar(@buf)
-    else if UD2_STATUS_NotAvail(statusCode)   then pl.PluginVendor := ''
+         if statusCode.wCategory = UD2_STATUSCAT_SUCCESS   then pl.PluginVendor := PWideChar(@buf)
+    else if statusCode.wCategory = UD2_STATUSCAT_NOT_AVAIL then pl.PluginVendor := ''
     else
     begin
       Errors.Add(Format(LNG_METHOD_FAILURE, [_ErrorLookup(statusCode), mnPluginVendorW, dllFile]));
@@ -596,8 +597,8 @@ begin
     end;
 
     statusCode := fPluginVersionW(@buf, cchBufferSize, lngID);
-         if UD2_STATUS_Successful(statusCode) then pl.PluginVersion := PWideChar(@buf)
-    else if UD2_STATUS_NotAvail(statusCode)   then pl.PluginVersion := ''
+         if statusCode.wCategory = UD2_STATUSCAT_SUCCESS   then pl.PluginVersion := PWideChar(@buf)
+    else if statusCode.wCategory = UD2_STATUSCAT_NOT_AVAIL then pl.PluginVersion := ''
     else
     begin
       Errors.Add(Format(LNG_METHOD_FAILURE, [_ErrorLookup(statusCode), mnPluginVersionW, dllFile]));
@@ -605,8 +606,8 @@ begin
     end;
 
     statusCode := fIdentificationMethodNameW(@buf, cchBufferSize);
-         if UD2_STATUS_Successful(statusCode) then pl.IdentificationMethodName := PWideChar(@buf)
-    else if UD2_STATUS_NotAvail(statusCode)   then pl.IdentificationMethodName := ''
+         if statusCode.wCategory = UD2_STATUSCAT_SUCCESS   then pl.IdentificationMethodName := PWideChar(@buf)
+    else if statusCode.wCategory = UD2_STATUSCAT_NOT_AVAIL then pl.IdentificationMethodName := ''
     else
     begin
       Errors.Add(Format(LNG_METHOD_FAILURE, [_ErrorLookup(statusCode), mnIdentificationMethodNameW, dllFile]));
@@ -616,10 +617,10 @@ begin
     statusCode := fIdentificationStringW(@buf, cchBufferSize);
     pl.IdentificationProcedureStatusCode := statusCode;
     pl.IdentificationProcedureStatusCodeDescribed := _ErrorLookup(statusCode);
-    if UD2_STATUS_Successful(statusCode) then
+    if statusCode.wCategory = UD2_STATUSCAT_SUCCESS then
     begin
       sIdentifier := PWideChar(@buf);
-      if statusCode = UD2_STATUS_OK_MULTILINE then
+      if UD2_STATUS_Equal(statusCode, UD2_STATUS_OK_MULTILINE, false) then
       begin
         // Multiple identifiers (e.g. multiple MAC addresses are delimited via UD2_MULTIPLE_ITEMS_DELIMITER)
         SetLength(sIdentifiers, 0);
@@ -634,7 +635,7 @@ begin
         pl.AddIdentification(sIdentifier);
       end;
     end
-    else if not UD2_STATUS_NotAvail(statusCode) then
+    else if statusCode.wCategory <> UD2_STATUSCAT_NOT_AVAIL then
     begin
       // Errors.Add(Format(LNG_METHOD_FAILURE, [_ErrorLookup(statusCode), mnIdentificationStringW, dllFile]));
       Errors.Add(Format(LNG_METHOD_FAILURE, [pl.IdentificationProcedureStatusCodeDescribed, mnIdentificationStringW, dllFile]));

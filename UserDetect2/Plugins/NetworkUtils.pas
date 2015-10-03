@@ -30,7 +30,7 @@ var
 begin
   BufLen := SizeOf(IP_ADAPTER_INFO);
   Result := GetAdaptersInfo(nil, @BufLen);
-  if Result <> ERROR_SUCCESS then Exit;
+  if Result <> ERROR_BUFFER_OVERFLOW then Exit;
   pAdapterInfo := AllocMem(BufLen);
   try
     Result := GetAdaptersInfo(pAdapterInfo, @BufLen);
@@ -61,7 +61,7 @@ var
 begin
   BufLen := SizeOf(IP_ADAPTER_INFO);
   Result := GetAdaptersInfo(nil, @BufLen);
-  if Result <> ERROR_SUCCESS then Exit;
+  if Result <> ERROR_BUFFER_OVERFLOW then Exit;
   pAdapterInfo := AllocMem(BufLen);
   try
     Result := GetAdaptersInfo(pAdapterInfo, @BufLen);
@@ -92,7 +92,7 @@ var
 begin
   BufLen := SizeOf(IP_ADAPTER_INFO);
   Result := GetAdaptersInfo(nil, @BufLen);
-  if Result <> ERROR_SUCCESS then Exit;
+  if Result <> ERROR_BUFFER_OVERFLOW then Exit;
   pAdapterInfo := AllocMem(BufLen);
   try
     Result := GetAdaptersInfo(pAdapterInfo, @BufLen);
