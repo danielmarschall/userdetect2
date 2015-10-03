@@ -11,6 +11,15 @@ interface
 uses
   Windows, SysUtils, Dialogs, ShellAPI;
 
+const
+  EXITCODE_OK = 0;
+  EXITCODE_TASK_NOTHING_MATCHES = 1;
+  EXITCODE_RUN_FAILURE = 2;
+  EXITCODE_TASK_NOT_EXISTS = 10;
+  EXITCODE_INI_NOT_FOUND = 11;
+  EXITCODE_RUNCMD_SYNTAX_ERROR = 12;
+  EXTICODE_SYNTAX_ERROR = 13;
+
 type
   TArrayOfString = array of String;
 
@@ -147,12 +156,13 @@ begin
   if result = '' then result := Format(LNG_UNKNOWN_ERROR, [ec]);
 end;
 
-procedure CheckLastOSCall(AThrowException: boolean);
+function CheckLastOSCall(AThrowException: boolean): boolean;
 var
   LastError: Cardinal;
 begin
   LastError := GetLastError;
-  if LastError <> 0 then
+  result := LastError = 0;
+  if not result then
   begin
     if AThrowException then
     begin
@@ -223,6 +233,7 @@ begin
       // No matching quotes
       // CreateProcess() handles the whole command line as single file name  ("abc -> "abc")
       // ShellExecuteEx() does not accept the command line
+      ExitCode := EXITCODE_RUNCMD_SYNTAX_ERROR;
       MessageDlg(LNG_INVALID_SYNTAX, mtError, [mbOK], 0);
       Exit;
     end;
@@ -268,7 +279,7 @@ begin
   sei.nShow        := WindowMode;
   if ShellExecuteEx(@sei) then Exit;
   {$IFNDEF PREFER_SHELLEXECUTEEX_MESSAGES}
-  CheckLastOSCall(false);
+  if not CheckLastOSCall(false) then ExitCode := EXITCODE_RUN_FAILURE;
   {$ENDIF}
 end;
 

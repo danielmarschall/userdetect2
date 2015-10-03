@@ -1,4 +1,4 @@
-unit test_utils;
+unit todo_more_identifications;
 
 interface
 
@@ -14,7 +14,6 @@ function GetRegisteredOwner: string;
 function LaufwerkBereit(root: string): boolean;
 function GetMyDocuments: string;
 function GetLocalAppData: string;
-function GetDomainName: string;
 function GetWindowsDirectory: string;
 // function GetWifiSSID: string;
 function GetTempDirectory: String;
@@ -403,47 +402,6 @@ function GetLocalAppData: string;
 begin
   {$MESSAGE Warn 'Nicht implementiert für dieses OS'}
   result := '';
-end;
-{$ENDIF}
-
-{$IFDEF MSWindows}
-var CacheDomainName: string;
-function GetDomainName: string;
-var
-  reg: TRegistry;
-begin
-  if CacheDomainName <> '' then
-  begin
-    result := CacheDomainName;
-    Exit;
-  end;
-  result := '';
-  reg := TRegistry.Create;
-  try
-    reg.RootKey := HKEY_LOCAL_MACHINE;
-    if reg.OpenKeyReadOnly
-      ('\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters') then
-    begin
-      result := reg.ReadString('Domain');
-      reg.CloseKey;
-    end;
-  finally
-    reg.Free;
-  end;
-  CacheDomainName := result;
-end;
-{$ELSE}
-function GetDomainName: string;
-begin
-  result := '';
-  {$IF DEFINDED(MACOS)}
-  //c++ builder kennt die methode:
-  //getdomainname(buffer,sizeof(buffer));
-  {$ELSEIF DEFINED(ANDROID)}
-  result := GetWifiSSID();
-  {$ELSE}
-  {$MESSAGE Warn 'Nicht implementiert für dieses OS'}
-  {$IFEND}
 end;
 {$ENDIF}
 

@@ -11,11 +11,12 @@ function GetDHCPIPAddressList(outsl: TStrings): DWORD;
 function GetGatewayIPAddressList(outsl: TStrings): DWORD;
 function GetMACAddress(const IPAddress: string; var outAddress: string): DWORD;
 function FormatMAC(s: string): string;
+function GetDomainName(var outDomainName: WideString): boolean;
 
 implementation
 
 uses
-  iphlp, WinSock;
+  iphlp, WinSock, Registry;
 
 // TODO: Replace GetAdaptersInfo()? A comment at MSDN states that there might be problems with IPv6
 //           "GetAdaptersInfo returns ERROR_NO_DATA if there are only IPv6 interfaces
@@ -211,6 +212,65 @@ begin
     result := result + Copy(s, m, 2);
     inc(m, 2);
   until m > Length(s);
+end;
+
+(*
+type
+  WKSTA_INFO_100   = Record
+      wki100_platform_id  : DWORD;
+      wki100_computername : LPWSTR;
+      wki100_langroup     : LPWSTR;
+      wki100_ver_major    : DWORD;
+      wki100_ver_minor    : DWORD;
+  End;
+
+   LPWKSTA_INFO_100 = ^WKSTA_INFO_100;
+
+function GetNetParam(AParam: integer): string;
+Var
+  PBuf  : LPWKSTA_INFO_100;
+  Res   : LongInt;
+begin
+  result := '';
+  Res := NetWkstaGetInfo(nil, 100, @PBuf);
+  If Res = NERR_Success Then
+    begin
+      case AParam of
+       0:   Result := string(PBuf^.wki100_computername);
+       1:   Result := string(PBuf^.wki100_langroup);
+      end;
+    end;
+end;
+
+function GetTheComputerName: string;
+begin
+  Result := GetNetParam(0);
+end;
+
+function GetTheDomainName: string;
+begin
+  Result := GetNetParam(1);
+end;
+
+*)
+
+function GetDomainName(var outDomainName: WideString): boolean;
+var
+  reg: TRegistry;
+begin
+  outDomainName := '';
+  reg := TRegistry.Create;
+  try
+    reg.RootKey := HKEY_LOCAL_MACHINE;
+    result := reg.OpenKeyReadOnly('\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters');
+    if result then
+    begin
+      outDomainName := reg.ReadString('Domain');
+      reg.CloseKey;
+    end;
+  finally
+    reg.Free;
+  end;
 end;
 
 end.

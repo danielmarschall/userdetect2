@@ -3,7 +3,7 @@ object UD2MainForm: TUD2MainForm
   Top = 177
   Width = 784
   Height = 440
-  ActiveControl = ListView2
+  ActiveControl = TasksListView
   Caption = 'ViaThinkSoft UserDetect2'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -22,13 +22,13 @@ object UD2MainForm: TUD2MainForm
     Top = 0
     Width = 768
     Height = 402
-    ActivePage = TabSheet4
+    ActivePage = TasksTabSheet
     Align = alClient
-    TabIndex = 3
+    TabIndex = 0
     TabOrder = 0
     object TasksTabSheet: TTabSheet
       Caption = 'Tasks'
-      object ListView1: TVTSListView
+      object TasksListView: TVTSListView
         Left = 0
         Top = 0
         Width = 760
@@ -38,19 +38,19 @@ object UD2MainForm: TUD2MainForm
         Items.Data = {
           3B0000000200000000000000FFFFFFFFFFFFFFFF000000000000000004746573
           7400000000FFFFFFFFFFFFFFFF0000000000000000057465737432}
-        LargeImages = ImageList1
+        LargeImages = TasksImageList
         ReadOnly = True
-        PopupMenu = PopupMenu1
+        PopupMenu = TasksPopupMenu
         TabOrder = 0
         OnCompare = ListViewCompare
-        OnDblClick = ListView1DblClick
-        OnKeyPress = ListView1KeyPress
+        OnDblClick = TasksListViewDblClick
+        OnKeyPress = TasksListViewKeyPress
       end
     end
     object TabSheet2: TTabSheet
       Caption = 'Identifications'
       ImageIndex = 1
-      object ListView3: TVTSListView
+      object IdentificationsListView: TVTSListView
         Left = 0
         Top = 0
         Width = 760
@@ -74,7 +74,7 @@ object UD2MainForm: TUD2MainForm
           end>
         ReadOnly = True
         RowSelect = True
-        PopupMenu = PopupMenu2
+        PopupMenu = IdentificationsPopupMenu
         TabOrder = 0
         ViewStyle = vsReport
         OnCompare = ListViewCompare
@@ -136,7 +136,7 @@ object UD2MainForm: TUD2MainForm
     object TabSheet4: TTabSheet
       Caption = 'Loaded Plugins'
       ImageIndex = 3
-      object ListView2: TVTSListView
+      object LoadedPluginsListView: TVTSListView
         Left = 0
         Top = 0
         Width = 760
@@ -178,6 +178,7 @@ object UD2MainForm: TUD2MainForm
           end>
         ReadOnly = True
         RowSelect = True
+        PopupMenu = LoadedPluginsPopupMenu
         TabOrder = 0
         ViewStyle = vsReport
         OnCompare = ListViewCompare
@@ -2105,7 +2106,7 @@ object UD2MainForm: TUD2MainForm
     Left = 520
     Top = 32
   end
-  object ImageList1: TImageList
+  object TasksImageList: TImageList
     Height = 32
     Width = 32
     Left = 560
@@ -2653,8 +2654,8 @@ object UD2MainForm: TUD2MainForm
     Left = 488
     Top = 32
   end
-  object PopupMenu1: TPopupMenu
-    OnPopup = PopupMenu1Popup
+  object TasksPopupMenu: TPopupMenu
+    OnPopup = TasksPopupMenuPopup
     Left = 456
     Top = 32
     object Run1: TMenuItem
@@ -2667,13 +2668,22 @@ object UD2MainForm: TUD2MainForm
       OnClick = Properties1Click
     end
   end
-  object PopupMenu2: TPopupMenu
-    OnPopup = PopupMenu2Popup
+  object IdentificationsPopupMenu: TPopupMenu
+    OnPopup = IdentificationsPopupMenuPopup
     Left = 424
     Top = 32
     object CopyTaskDefinitionExample1: TMenuItem
       Caption = 'Copy Task Definition Example to Clipboard'
       OnClick = CopyTaskDefinitionExample1Click
+    end
+  end
+  object LoadedPluginsPopupMenu: TPopupMenu
+    OnPopup = LoadedPluginsPopupMenuPopup
+    Left = 392
+    Top = 32
+    object MenuItem1: TMenuItem
+      Caption = 'Copy status code to Clipboard'
+      OnClick = MenuItem1Click
     end
   end
 end

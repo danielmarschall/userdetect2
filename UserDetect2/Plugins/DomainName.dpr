@@ -1,10 +1,11 @@
-library UserSID;
+library DomainName;
 
 uses
   Windows,
   SysUtils,
   Classes,
-  SPgetsid,
+  Registry,
+  networkutils in 'networkutils.pas',
   UD2_PluginIntf in '..\UD2_PluginIntf.pas',
   UD2_PluginUtils in '..\UD2_PluginUtils.pas',
   UD2_PluginStatus in '..\UD2_PluginStatus.pas';
@@ -12,7 +13,7 @@ uses
 {$R *.res}
 
 const
-  PLUGIN_GUID: TGUID = '{96374FFC-0A55-46B4-826B-CFD702FB24A2}';
+  PLUGIN_GUID: TGUID = '{6D7AABD7-C4A8-43ED-99E3-3AF4723DD7B2}';
 
 function PluginIdentifier: TGUID; cdecl;
 begin
@@ -23,7 +24,11 @@ function IdentificationStringW(lpIdentifier: LPWSTR; cchSize: DWORD): UD2_STATUS
 var
   stIdentifier: WideString;
 begin
-  stIdentifier := GetCurrentUserSid;
+  if not GetDomainName(stIdentifier) then
+  begin
+    result := UD2_STATUS_NOTAVAIL_OS_NOT_SUPPORTED;
+    Exit;
+  end;
   result := UD2_WritePascalStringToPointerW(lpIdentifier, cchSize, stIdentifier);
 end;
 
@@ -34,9 +39,9 @@ var
 begin
   primaryLangID := wLangID and $00FF;
   if primaryLangID = LANG_GERMAN then
-    stPluginName := 'SID des Benutzers'
+    stPluginName := 'Domänen-Name'
   else
-    stPluginName := 'User Security Identifier';
+    stPluginName := 'Domain name';
   result := UD2_WritePascalStringToPointerW(lpPluginName, cchSize, stPluginName);
 end;
 
@@ -54,7 +59,7 @@ function IdentificationMethodNameW(lpIdentificationMethodName: LPWSTR; cchSize: 
 var
   stIdentificationMethodName: WideString;
 begin
-  stIdentificationMethodName := 'SID';
+  stIdentificationMethodName := 'DomainName';
   result := UD2_WritePascalStringToPointerW(lpIdentificationMethodName, cchSize, stIdentificationMethodName);
 end;
 

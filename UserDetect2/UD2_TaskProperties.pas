@@ -88,7 +88,7 @@ begin
   end
   else
   begin
-    UD2MainForm.ImageList1.GetIcon(0, Image1.Picture.Icon);
+    UD2MainForm.TasksImageList.GetIcon(0, Image1.Picture.Icon);
   end;
 end;
 

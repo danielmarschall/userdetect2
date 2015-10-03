@@ -1,6 +1,6 @@
 #define BUILDING_DLL
 
-#include "ud2_api.h"
+#include "../ud2_api.h"
 
 UD2_API GUID PluginIdentifier() {
 	return __GUID("{7576BD8F-A0C4-436F-B953-B137CBFD9FC7}");

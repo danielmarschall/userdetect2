@@ -1,0 +1,23 @@
+
+TODO
+----
+
+* Develop more plugins
+	- workstation/server (NetServerGetInfo)
+	- Computer SID
+	- Win version
+	- pc name
+	- lanman workgroup name
+	- user name
+* (future): also develop a commandline-only-tool that only returns errorlevels, and which does only check a single identification string (equal to testuser.exe, "UserDetect1")
+* transfer all functionalities from testuser.exe
+* (small detail): in CLI mode, you can see the mainform for a few milliseconds
+* (future): Full Task Definition File Editor functionality
+* (idea): pass arguments to the plugin, e.g. FileAge(Letter.doc):20=calc.exe
+	problem: too many requires escape signs and/or forbidden signs, and too complex
+* put geticon functions in ud2_obj.pas?
+* (idea): can a plugin have multiple methodnames?
+* offer possibility to re-load the Task Definition File (maybe even auto-detect if they were changed)
+* offer possibility möglichkeit to re-load all plugins
+* (idea): slow DLL files killable (via GUI)
+* splash screen because of probably slow DLLs

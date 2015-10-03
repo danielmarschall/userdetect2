@@ -1,19 +1,5 @@
 unit UD2_Main;
 
-// TODO: !!ud2 plugin: computer sid, win version, pc name, username, ... (RT)
-// TODO (future): auch commandline tool das nur errorlevel zurückgibt
-// TODO: alle funktionalitäten aus userdetect1 (is_user) übernehmen
-// TODO (kleinigkeit): wie das aufblitzen des forms verhindern bei CLI?
-// TODO (future): Editor, um alles in der GUI zu erledigen
-// TODO (idee): argumente an die DLL stellen, z.B. FileAge(Letter.doc):20=calc.exe
-// TODO: example ini file entwerfen
-// TODO: geticon funktion in ud2_obj.pas?
-// TODO (idee): ein plugin kann mehrere methodnames haben?
-// TODO: möglichkeit, Task Definition File neu zu laden, nach änderungen die man durchgeführt hat
-// TODO: möglichkeit, plugins neu zu laden
-// TODO (idee): lahme DLLs abschießen beim start (per GUI)
-// TODO: splash screen wegen ggf. langer DLL load zeit
-
 interface
 
 {$IF CompilerVersion >= 25.0}
@@ -44,8 +30,8 @@ type
     TabSheet3: TTabSheet;
     IniTemplateMemo: TMemo;
     TabSheet4: TTabSheet;
-    ListView1: TVTSListView;
-    ImageList1: TImageList;
+    TasksListView: TVTSListView;
+    TasksImageList: TImageList;
     SaveDialog1: TSaveDialog;
     TabSheet5: TTabSheet;
     Image1: TImage;
@@ -57,36 +43,40 @@ type
     Label6: TLabel;
     Label7: TLabel;
     Label8: TLabel;
-    ListView2: TVTSListView;
-    ListView3: TVTSListView;
+    LoadedPluginsListView: TVTSListView;
+    IdentificationsListView: TVTSListView;
     ErrorsTabSheet: TTabSheet;
     ErrorsMemo: TMemo;
     Memo1: TMemo;
     Panel1: TPanel;
     Button1: TButton;
     Button2: TButton;
-    PopupMenu1: TPopupMenu;
+    TasksPopupMenu: TPopupMenu;
     Run1: TMenuItem;
     Properties1: TMenuItem;
-    PopupMenu2: TPopupMenu;
+    IdentificationsPopupMenu: TPopupMenu;
     CopyTaskDefinitionExample1: TMenuItem;
     Button3: TButton;
     VersionLabel: TLabel;
+    LoadedPluginsPopupMenu: TPopupMenu;
+    MenuItem1: TMenuItem;
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
-    procedure ListView1DblClick(Sender: TObject);
-    procedure ListView1KeyPress(Sender: TObject; var Key: Char);
+    procedure TasksListViewDblClick(Sender: TObject);
+    procedure TasksListViewKeyPress(Sender: TObject; var Key: Char);
     procedure Button1Click(Sender: TObject);
     procedure Button2Click(Sender: TObject);
     procedure URLLabelClick(Sender: TObject);
-    procedure PopupMenu1Popup(Sender: TObject);
+    procedure TasksPopupMenuPopup(Sender: TObject);
     procedure Run1Click(Sender: TObject);
     procedure Properties1Click(Sender: TObject);
-    procedure PopupMenu2Popup(Sender: TObject);
+    procedure IdentificationsPopupMenuPopup(Sender: TObject);
     procedure CopyTaskDefinitionExample1Click(Sender: TObject);
     procedure ListViewCompare(Sender: TObject; Item1, Item2: TListItem;
       Data: Integer; var Compare: Integer);
     procedure Button3Click(Sender: TObject);
+    procedure LoadedPluginsPopupMenuPopup(Sender: TObject);
+    procedure MenuItem1Click(Sender: TObject);
   protected
     ud2: TUD2;
     procedure LoadTaskList;
@@ -144,6 +134,7 @@ begin
     end
     else
     begin
+      ExitCode := EXITCODE_INI_NOT_FOUND;
       MessageDlg(Format(LNG_FILE_NOT_FOUND, [ParamStr(1)]), mtError, [mbOK], 0);
       result := '';
     end;
@@ -182,7 +173,7 @@ var
   iconIndex: integer;
   obj: TUD2ListViewEntry;
 begin
-  ListView1.Clear;
+  TasksListView.Clear;
   sl := TStringList.Create;
   try
     ud2.GetTaskListing(sl);
@@ -194,15 +185,15 @@ begin
       Obj.ShortTaskName := ShortTaskName;
       Obj.CloseAfterLaunching := ud2.ReadMetatagBool(ShortTaskName, TagCloseAfterLaunching, DefaultCloseAfterLaunching);
 
-      ListView1.AddItem(sl.Values[ShortTaskName], TObject(Obj));
+      TasksListView.AddItem(sl.Values[ShortTaskName], TObject(Obj));
 
       iconString := ud2.ReadMetatagString(ShortTaskName, TagIcon, '');
       if iconString <> '' then
       begin
-        iconIndex := AddIconRecToImageList(SplitIconString(iconString), ImageList1);
+        iconIndex := AddIconRecToImageList(SplitIconString(iconString), TasksImageList);
         if iconIndex <> -1 then
         begin
-          ListView1.Items.Item[ListView1.Items.Count-1].ImageIndex := iconIndex;
+          TasksListView.Items.Item[TasksListView.Items.Count-1].ImageIndex := iconIndex;
         end;
       end;
     end;
@@ -224,6 +215,7 @@ begin
   begin
     // This can happen if the task name is taken from command line
     MessageDlg(Format(LNG_TASK_NOT_EXISTS, [ShortTaskName]), mtError, [mbOK], 0);
+    ExitCode := EXITCODE_TASK_NOT_EXISTS;
     Exit;
   end;
 
@@ -236,13 +228,14 @@ begin
       TagWarnIfNothingMatches, DefaultWarnIfNothingMatches) then
     begin
       MessageDlg(LNG_NOTHING_MATCHES, mtWarning, [mbOK], 0);
+    ExitCode := EXITCODE_TASK_NOTHING_MATCHES;
     end;
 
     for i := 0 to slCmds.Count-1 do
     begin
       cmd := slCmds.Strings[i];
       if cmd = '' then continue;
-      UD2_RunCMD(cmd, SW_NORMAL); // TODO: SW_NORMAL konfigurieren?
+      UD2_RunCMD(cmd, SW_NORMAL); // IDEA: let SW_NORMAL be configurable?
     end;
   finally
     slCmds.Free;
@@ -254,9 +247,9 @@ var
   i: integer;
 begin
   if Assigned(ud2) then ud2.Free;
-  for i := 0 to ListView1.Items.Count-1 do
+  for i := 0 to TasksListView.Items.Count-1 do
   begin
-    TUD2ListViewEntry(ListView1.Items.Item[i].Data).Free;
+    TUD2ListViewEntry(TasksListView.Items.Item[i].Data).Free;
   end;
 end;
 
@@ -276,14 +269,14 @@ var
   pl: TUD2Plugin;
   ude: TUD2IdentificationEntry;
 begin
-  ListView3.Clear;
+  IdentificationsListView.Clear;
   for i := 0 to ud2.LoadedPlugins.Count-1 do
   begin
     pl := ud2.LoadedPlugins.Items[i] as TUD2Plugin;
     for j := 0 to pl.DetectedIdentifications.Count-1 do
     begin
       ude := pl.DetectedIdentifications.Items[j] as TUD2IdentificationEntry;
-      with ListView3.Items.Add do
+      with IdentificationsListView.Items.Add do
       begin
         Caption := pl.PluginName;
         SubItems.Add(pl.IdentificationMethodName);
@@ -293,9 +286,9 @@ begin
     end;
   end;
 
-  for i := 0 to ListView3.Columns.Count-1 do
+  for i := 0 to IdentificationsListView.Columns.Count-1 do
   begin
-    ListView3.Columns.Items[i].Width := LVSCW_AUTOSIZE_USEHEADER;
+    IdentificationsListView.Columns.Items[i].Width := LVSCW_AUTOSIZE_USEHEADER;
   end;
 end;
 
@@ -335,11 +328,11 @@ var
   i: integer;
   pl: TUD2Plugin;
 begin
-  ListView2.Clear;
+  LoadedPluginsListView.Clear;
   for i := 0 to ud2.LoadedPlugins.Count-1 do
   begin
     pl := ud2.LoadedPlugins.Items[i] as TUD2Plugin;
-    with ListView2.Items.Add do
+    with LoadedPluginsListView.Items.Add do
     begin
       Caption := pl.PluginDLL;
       SubItems.Add(pl.PluginVendor);
@@ -353,9 +346,9 @@ begin
     end;
   end;
 
-  for i := 0 to ListView2.Columns.Count-1 do
+  for i := 0 to LoadedPluginsListView.Columns.Count-1 do
   begin
-    ListView2.Columns.Items[i].Width := LVSCW_AUTOSIZE_USEHEADER;
+    LoadedPluginsListView.Columns.Items[i].Width := LVSCW_AUTOSIZE_USEHEADER;
   end;
 end;
 
@@ -365,11 +358,14 @@ resourcestring
 var
   LoadedIniFile: string;
 begin
+  ExitCode := EXITCODE_OK;
+
   // To avoid accidental changes from the GUI designer
   PageControl1.ActivePage := TasksTabSheet;
 
   if ((ParamCount = 1) and (ParamStr(1) = '/?')) or (ParamCount >= 3) then
   begin
+    ExitCode := EXTICODE_SYNTAX_ERROR;
     MessageDlg(Format(LNG_SYNTAX, [GetOwnCmdName]), mtInformation, [mbOK], 0);
     Close;
     Exit;
@@ -401,21 +397,21 @@ begin
   end;
 end;
 
-procedure TUD2MainForm.ListView1DblClick(Sender: TObject);
+procedure TUD2MainForm.TasksListViewDblClick(Sender: TObject);
 var
   obj: TUD2ListViewEntry;
 begin
-  if ListView1.ItemIndex = -1 then exit;
-  obj := TUD2ListViewEntry(ListView1.Selected.Data);
+  if TasksListView.ItemIndex = -1 then exit;
+  obj := TUD2ListViewEntry(TasksListView.Selected.Data);
   DoRun(obj.ShortTaskName);
   if obj.CloseAfterLaunching then Close;
 end;
 
-procedure TUD2MainForm.ListView1KeyPress(Sender: TObject; var Key: Char);
+procedure TUD2MainForm.TasksListViewKeyPress(Sender: TObject; var Key: Char);
 begin
   if Key = #13 then
   begin
-    ListView1DblClick(Sender);
+    TasksListViewDblClick(Sender);
   end;
 end;
 
@@ -444,23 +440,23 @@ begin
   UD2_RunCMD(s, SW_NORMAL);
 end;
 
-procedure TUD2MainForm.PopupMenu1Popup(Sender: TObject);
+procedure TUD2MainForm.TasksPopupMenuPopup(Sender: TObject);
 begin
-  Run1.Enabled := ListView1.ItemIndex <> -1;
-  Properties1.Enabled := ListView1.ItemIndex <> -1;
+  Run1.Enabled := TasksListView.ItemIndex <> -1;
+  Properties1.Enabled := TasksListView.ItemIndex <> -1;
 end;
 
 procedure TUD2MainForm.Run1Click(Sender: TObject);
 begin
-  ListView1DblClick(Sender);
+  TasksListViewDblClick(Sender);
 end;
 
 procedure TUD2MainForm.Properties1Click(Sender: TObject);
 var
   obj: TUD2ListViewEntry;
 begin
-  if ListView1.ItemIndex = -1 then exit;
-  obj := TUD2ListViewEntry(ListView1.Selected.Data);
+  if TasksListView.ItemIndex = -1 then exit;
+  obj := TUD2ListViewEntry(TasksListView.Selected.Data);
   if obj.TaskPropertiesForm = nil then
   begin
     obj.TaskPropertiesForm := TUD2TaskPropertiesForm.Create(Self, ud2, obj.ShortTaskName);
@@ -468,20 +464,20 @@ begin
   obj.TaskPropertiesForm.Show;
 end;
 
-procedure TUD2MainForm.PopupMenu2Popup(Sender: TObject);
+procedure TUD2MainForm.IdentificationsPopupMenuPopup(Sender: TObject);
 begin
-  CopyTaskDefinitionExample1.Enabled := ListView3.ItemIndex <> -1;
+  CopyTaskDefinitionExample1.Enabled := IdentificationsListView.ItemIndex <> -1;
 end;
 
 procedure TUD2MainForm.CopyTaskDefinitionExample1Click(Sender: TObject);
 var
   s: string;
 begin
-  s := '; '+ListView3.Selected.Caption+#13#10+
-       ListView3.Selected.SubItems[0] + ':' + ListView3.Selected.SubItems[1] + '=calc.exe'+#13#10+
+  s := '; '+IdentificationsListView.Selected.Caption+#13#10+
+       IdentificationsListView.Selected.SubItems[0] + ':' + IdentificationsListView.Selected.SubItems[1] + '=calc.exe'+#13#10+
        #13#10+
        '; Alternatively:'+#13#10+
-       ListView3.Selected.SubItems[2] + ':' + ListView3.Selected.SubItems[1] + '=calc.exe'+#13#10;
+       IdentificationsListView.Selected.SubItems[2] + ':' + IdentificationsListView.Selected.SubItems[1] + '=calc.exe'+#13#10;
   Clipboard.AsText := s;
 end;
 
@@ -506,6 +502,19 @@ end;
 procedure TUD2MainForm.Button3Click(Sender: TObject);
 begin
   VTS_CheckUpdates('userdetect2', VersionLabel.Caption);
+end;
+
+procedure TUD2MainForm.LoadedPluginsPopupMenuPopup(Sender: TObject);
+begin
+  MenuItem1.Enabled := LoadedPluginsListView.ItemIndex <> -1;
+end;
+
+procedure TUD2MainForm.MenuItem1Click(Sender: TObject);
+var
+  s: string;
+begin
+  s := '; '+LoadedPluginsListView.Selected.SubItems.Strings[6];
+  Clipboard.AsText := s;
 end;
 
 end.
