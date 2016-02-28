@@ -96,7 +96,13 @@ end;
 
 procedure TVTSListView.WMNotifyMessage(var msg: TWMNotify);
 begin
-  inherited;
+  try
+    inherited;
+  except
+    // Workaround for Delphi 6, which raises an EAccessViolation in
+    // CallWindowProc at TWinControl.DefaultHandler, when the code executed
+    // on Windows Server 2008. 
+  end;
   if (Msg.NMHdr^.code = HDN_ENDTRACK) and (FSortedColumn > -1) then
   begin
     ShowArrowOfListViewColumn;
