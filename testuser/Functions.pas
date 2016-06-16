@@ -56,7 +56,7 @@ end;
 
 function StrICmp(a, b: string): boolean;
 begin
-  result := UpperCase(a) = UpperCase(b);
+  result := LowerCase(a) = LowerCase(b);
 end;
 
 function EnforceLength(s: string; len: integer; filler: char;

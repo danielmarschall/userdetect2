@@ -4,6 +4,7 @@ uses
   Windows,
   SysUtils,
   Classes,
+  MiscUtils,
   UD2_PluginIntf in '..\UD2_PluginIntf.pas',
   UD2_PluginUtils in '..\UD2_PluginUtils.pas',
   UD2_PluginStatus in '..\UD2_PluginStatus.pas';
@@ -16,19 +17,6 @@ const
 function PluginIdentifier: TGUID; cdecl;
 begin
   result := PLUGIN_GUID;
-end;
-
-function GetComputerName: string;
-// http://www.delphi-treff.de/tipps-tricks/netzwerkinternet/netzwerkeigenschaften/computernamen-des-eigenen-rechners-ermitteln/
-var
-  Len: DWORD;
-begin
-  Len := MAX_COMPUTERNAME_LENGTH+1;
-  SetLength(Result,Len);
-  if Windows.GetComputerName(PChar(Result), Len) then
-    SetLength(Result,Len)
-  else
-    RaiseLastOSError;
 end;
 
 function IdentificationStringW(lpIdentifier: LPWSTR; cchSize: DWORD): UD2_STATUS; cdecl;

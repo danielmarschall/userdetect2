@@ -154,7 +154,7 @@ function UD2_STATUS_FormatStatusCode(grStatus: UD2_STATUS): string;
 begin
   // 00 0000 {44332211-1234-ABCD-EFEF-001122334455} 00000000 00000000
   result := Format('%.2x %.4x %s %.8x %.8x', [
-                grStatus.bReserved,
+    grStatus.bReserved,
 		grStatus.wCategory,
 		GUIDTostring(grStatus.grAuthority),
 		grStatus.dwMessage,

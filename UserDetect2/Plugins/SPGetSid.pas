@@ -90,8 +90,7 @@ begin
   Result := True;
 end;
 
-function ObtainTextSid(hToken: THandle; pszSid: PChar;
-  var dwBufferLen: DWORD): BOOL;
+function ObtainTextSid(hToken: THandle; pszSid: PChar; var dwBufferLen: DWORD): BOOL;
 var
   dwReturnLength: DWORD;
   dwTokenUserLength: DWORD;
@@ -133,7 +132,7 @@ var
   hAccessToken: THandle;
   bSuccess: BOOL;
   dwBufferLen: DWORD;
-  szSid: array[0..260] of Char;
+  szSid: array[0..MAX_PATH] of Char;
 begin
   Result := '';
 

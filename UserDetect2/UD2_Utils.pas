@@ -8,6 +8,9 @@ interface
 
 {$INCLUDE 'UserDetect2.inc'}
 
+{$WARN UNSAFE_CODE OFF}
+{$WARN UNSAFE_TYPE OFF}
+
 uses
   Windows, SysUtils, Dialogs, ShellAPI;
 
@@ -18,7 +21,7 @@ const
   EXITCODE_TASK_NOT_EXISTS = 10;
   EXITCODE_INI_NOT_FOUND = 11;
   EXITCODE_RUNCMD_SYNTAX_ERROR = 12;
-  EXTICODE_SYNTAX_ERROR = 13;
+  EXITCODE_SYNTAX_ERROR = 13;
 
 type
   TArrayOfString = array of String;
@@ -42,6 +45,7 @@ function SplitIconString(IconString: string): TIconFileIdx;
 // function GetHTML(AUrl: string): string;
 procedure VTS_CheckUpdates(VTSID, CurVer: string);
 function FormatOSError(ec: DWORD): string;
+function CheckBoolParam(idx: integer; name: string): boolean;
 
 implementation
 
@@ -256,11 +260,18 @@ begin
     end;
   end;
 
+  ZeroMemory(@sei, SizeOf(sei));
+
+  if Pos(UD2_RUN_AS_ADMIN, cmdLine) >= 1 then
+  begin
+    cmdLine := StringReplace(cmdLine, UD2_RUN_AS_ADMIN, '', [rfReplaceAll]);
+
+    sei.lpVerb := 'runas';
+  end;
+
   if Pos(UD2_RUN_IN_OWN_DIRECTORY_PREFIX, cmdLine) >= 1 then
   begin
     cmdLine := StringReplace(cmdLine, UD2_RUN_IN_OWN_DIRECTORY_PREFIX, '', [rfReplaceAll]);
-
-    cmdLine := Copy(cmdLine, 1+Length(UD2_RUN_IN_OWN_DIRECTORY_PREFIX), Length(cmdLine)-Length(UD2_RUN_IN_OWN_DIRECTORY_PREFIX));
 
     cmdFile := ExtractFileName(cmdLine);
     cmdDir  := ExtractFilePath(cmdLine);
@@ -269,15 +280,6 @@ begin
   begin
     cmdFile := cmdLine;
     cmdDir := '';
-  end;
-
-  ZeroMemory(@sei, SizeOf(sei));
-
-  if Pos(UD2_RUN_AS_ADMIN, cmdLine) >= 1 then
-  begin
-    cmdLine := StringReplace(cmdLine, UD2_RUN_AS_ADMIN, '', [rfReplaceAll]);
-
-    sei.lpVerb := 'runas';
   end;
 
   sei.cbSize       := SizeOf(sei);
@@ -407,6 +409,12 @@ begin
       MessageDlg(LNG_NO_UPDATE, mtInformation, [mbOk], 0);
     end;
   end;
+end;
+
+function CheckBoolParam(idx: integer; name: string): boolean;
+begin
+  Result := ('/'+LowerCase(name) = LowerCase(ParamStr(idx))) or
+            ('-'+LowerCase(name) = LowerCase(ParamStr(idx)));
 end;
 
 end.

@@ -1,5 +1,8 @@
 unit PatchU;
 
+{$WARN UNSAFE_CODE OFF}
+{$WARN UNSAFE_TYPE OFF}
+
 interface
 
 type

@@ -16,6 +16,8 @@ uses
 
 begin
   Application.Initialize;
+  Application.ShowMainForm := false;
   Application.CreateForm(TUD2MainForm, UD2MainForm);
+  UD2MainForm.Run;
   Application.Run;
 end.

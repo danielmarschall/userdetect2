@@ -6,6 +6,8 @@ interface
 {$LEGACYIFEND ON}
 {$IFEND}
 
+{$WARN UNSAFE_TYPE OFF}
+
 uses
   Windows, SysUtils, UD2_PluginStatus;
 

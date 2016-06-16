@@ -8,6 +8,9 @@ interface
 
 {$INCLUDE 'UserDetect2.inc'}
 
+{$WARN UNSAFE_CODE OFF}
+{$WARN UNSAFE_TYPE OFF}
+
 uses
   Windows, SysUtils, Classes, IniFiles, Contnrs, Dialogs, UD2_PluginIntf,
   UD2_PluginStatus;
@@ -67,6 +70,11 @@ type
     property Errors: TStrings read FErrors;
     property LoadedPlugins: TObjectList{<TUD2Plugin>} read FLoadedPlugins;
     property IniFile: TMemIniFile read FIniFile;
+
+procedure GetAllIdNames(outSL: TStrings);
+function FulfilsEverySubterm(idTerm: WideString; slIdNames: TStrings=nil): boolean;
+
+
     procedure GetCommandList(ShortTaskName: string; outSL: TStrings);
     procedure HandlePluginDir(APluginDir, AFileMask: string);
     procedure GetTaskListing(outSL: TStrings);
@@ -202,7 +210,6 @@ Var
   sPluginID, prevDLL: string;
   {$ENDIF}
   lngid: LANGID;
-  maskpath: string;
 resourcestring
   LNG_PLUGINS_SAME_GUID = 'Attention: The plugin "%s" and the plugin "%s" have the same identification GUID. The latter will not be loaded.';
 begin
@@ -340,60 +347,89 @@ NAMING EXAMPLE: ComputerName:ABC&&User:John=calc.exe
 
 *)
 
-procedure TUD2.GetCommandList(ShortTaskName: string; outSL: TStrings);
+procedure TUD2.GetAllIdNames(outSL: TStrings);
 var
   i, j: integer;
-  cmd: string;
-  idTerm, idName: WideString;
-  slSV, slIdNames: TStrings;
-  x: TArrayOfString;
-  nameVal: TArrayOfString;
-  FulfilsEverySubterm: boolean;
   pl: TUD2Plugin;
   ude: TUD2IdentificationEntry;
 begin
-  SetLength(x, 0);
+  for i := 0 to LoadedPlugins.Count-1 do
+  begin
+    pl := LoadedPlugins.Items[i] as TUD2Plugin;
+    for j := 0 to pl.DetectedIdentifications.Count-1 do
+    begin
+      ude := pl.DetectedIdentifications.Items[j] as TUD2IdentificationEntry;
+      ude.GetIdNames(outSL);
+    end;
+  end;
+end;
+
+function TUD2.FulfilsEverySubterm(idTerm: WideString; slIdNames: TStrings=nil): boolean;
+var
+  x: TArrayOfString;
+  i: integer;
+  idName: WideString;
+  cleanUpStringList: boolean;
+begin
+  cleanUpStringList := slIdNames = nil;
+  try
+    if cleanUpStringList then
+    begin
+      slIdNames := TStringList.Create;
+      GetAllIdNames(slIdNames);
+    end;
+
+    SetLength(x, 0);
+    if Pos(':', idTerm) = 0 then
+    begin
+      result := false;
+      Exit;
+    end;
+    x := SplitString('&&', idTerm);
+    result := true;
+    for i := Low(x) to High(x) do
+    begin
+      idName := x[i];
+
+      if slIdNames.IndexOf(idName) = -1 then
+      begin
+        result := false;
+        break;
+      end;
+    end;
+  finally
+    if cleanUpStringList and Assigned(slIdNames) then
+      slIdNames.Free;
+  end;
+end;
+
+procedure TUD2.GetCommandList(ShortTaskName: string; outSL: TStrings);
+var
+  i: integer;
+  cmd: string;
+  idTerm: WideString;
+  slSV, slIdNames: TStrings;
+  nameVal: TArrayOfString;
+begin
   SetLength(nameVal, 0);
 
   slIdNames := TStringList.Create;
   try
-    for i := 0 to LoadedPlugins.Count-1 do
-    begin
-      pl := LoadedPlugins.Items[i] as TUD2Plugin;
-      for j := 0 to pl.DetectedIdentifications.Count-1 do
-      begin
-        ude := pl.DetectedIdentifications.Items[j] as TUD2IdentificationEntry;
-        ude.GetIdNames(slIdNames);
-      end;
-    end;
+    GetAllIdNames(slIdNames);
 
     slSV := TStringList.Create;
     try
       FIniFile.ReadSectionValues(ShortTaskName, slSV);
-      for j := 0 to slSV.Count-1 do
+      for i := 0 to slSV.Count-1 do
       begin
         // We are doing the interpretation of the line ourselves, because
         // TStringList.Values[] would not allow multiple command lines with the
         // same key (idTerm)
-        nameVal := SplitString('=', slSV.Strings[j]);
+        nameVal := SplitString('=', slSV.Strings[i]);
         idTerm := nameVal[0];
         cmd    := nameVal[1];
 
-        if Pos(':', idTerm) = 0 then Continue;
-        x := SplitString('&&', idTerm);
-        FulfilsEverySubterm := true;
-        for i := Low(x) to High(x) do
-        begin
-          idName := x[i];
-
-          if slIdNames.IndexOf(idName) = -1 then
-          begin
-            FulfilsEverySubterm := false;
-            break;
-          end;
-        end;
-
-        if FulfilsEverySubterm then outSL.Add(cmd);
+        if FulfilsEverySubterm(idTerm, slIdNames) then outSL.Add(cmd);
       end;
     finally
       slSV.Free;

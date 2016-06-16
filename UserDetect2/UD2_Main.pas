@@ -8,6 +8,10 @@ interface
 
 {$INCLUDE 'UserDetect2.inc'}
 
+{$WARN UNSAFE_CODE OFF}
+{$WARN UNSAFE_TYPE OFF}
+{$WARN UNSAFE_CAST OFF}
+
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, Grids, ValEdit, UD2_Obj, ComCtrls, ImgList, ExtCtrls,
@@ -60,6 +64,8 @@ type
     VersionLabel: TLabel;
     LoadedPluginsPopupMenu: TPopupMenu;
     MenuItem1: TMenuItem;
+    Panel2: TPanel;
+    Image2: TImage;
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure TasksListViewDblClick(Sender: TObject);
@@ -85,6 +91,8 @@ type
     function GetIniFileName: string;
     procedure DoRun(ShortTaskName: string);
     procedure CheckForErrors;
+  public
+    procedure Run;
   end;
 
 var
@@ -125,7 +133,7 @@ function TUD2MainForm.GetIniFileName: string;
 resourcestring
   LNG_FILE_NOT_FOUND = 'File "%s" not found.';
 begin
-  if ParamCount >= 1 then
+  if (ParamCount >= 1) and not CheckBoolParam(1, 'C') then
   begin
     if FileExists(ParamStr(1)) then
     begin
@@ -222,19 +230,17 @@ begin
   try
     ud2.GetCommandList(ShortTaskName, slCmds);
 
-    if (slCmds.Count = 0) and
-      ud2.ReadMetatagBool(ShortTaskName,
-      TagWarnIfNothingMatches, DefaultWarnIfNothingMatches) then
+    if (slCmds.Count = 0) and ud2.ReadMetatagBool(ShortTaskName, TagWarnIfNothingMatches, DefaultWarnIfNothingMatches) then
     begin
       MessageDlg(LNG_NOTHING_MATCHES, mtWarning, [mbOK], 0);
-    ExitCode := EXITCODE_TASK_NOTHING_MATCHES;
+      ExitCode := EXITCODE_TASK_NOTHING_MATCHES;
     end;
 
     for i := 0 to slCmds.Count-1 do
     begin
       cmd := slCmds.Strings[i];
       if cmd = '' then continue;
-      UD2_RunCMD(cmd, SW_NORMAL); // Idea: let SW_NORMAL be configurable by the user?
+      UD2_RunCMD(cmd, SW_NORMAL); // Idea: Let SW_NORMAL be configurable by the user?
     end;
   finally
     slCmds.Free;
@@ -352,50 +358,9 @@ begin
 end;
 
 procedure TUD2MainForm.FormShow(Sender: TObject);
-resourcestring
-  LNG_SYNTAX = 'Syntax: %s [TaskDefinitionFile [TaskName]]';
-var
-  LoadedIniFile: string;
 begin
-  ExitCode := EXITCODE_OK;
-
-  // To avoid accidental changes from the GUI designer
+  // To avoid accidental change of the default tab from the IDE VCL Designer
   PageControl1.ActivePage := TasksTabSheet;
-
-  if ((ParamCount = 1) and (ParamStr(1) = '/?')) or (ParamCount >= 3) then
-  begin
-    ExitCode := EXTICODE_SYNTAX_ERROR;
-    MessageDlg(Format(LNG_SYNTAX, [GetOwnCmdName]), mtInformation, [mbOK], 0);
-    Close;
-    Exit;
-  end;
-
-  LoadedIniFile := GetIniFileName;
-  if LoadedIniFile = '' then
-  begin
-    Close;
-    Exit;
-  end;
-  ud2 := TUD2.Create(LoadedIniFile);
-
-  ud2.HandlePluginDir('',        '*.smp');
-  ud2.HandlePluginDir('Plugins', '*.smp');
-  ud2.HandlePluginDir('Plugins', '*.dll');
-
-  if ParamCount >= 2 then
-  begin
-    DoRun(ParamStr(2));
-    Close;
-    Exit;
-  end
-  else
-  begin
-    LoadTaskList;
-    LoadDetectedIDs;
-    LoadINITemplate;
-    LoadLoadedPluginList;
-    CheckForErrors;
-  end;
 end;
 
 procedure TUD2MainForm.TasksListViewDblClick(Sender: TObject);
@@ -516,6 +481,78 @@ var
 begin
   s := '; ' + LoadedPluginsListView.Selected.SubItems.Strings[6];
   Clipboard.AsText := s;
+end;
+
+procedure TUD2MainForm.Run;
+resourcestring
+  LNG_SYNTAX = 'Syntax: %s [TaskDefinitionFile [/T TaskName] | /C IdentificationTerm [Command] | /?]';
+var
+  LoadedIniFile: string;
+begin
+  ExitCode := EXITCODE_OK;
+
+  if ((ParamCount = 1) and CheckBoolParam(1, '?')) or
+     (CheckBoolParam(2, 'T') and (ParamCount > 3)) or
+     (CheckBoolParam(1, 'C') and (ParamCount > 3)) or
+     (not CheckBoolParam(2, 'T') and not CheckBoolParam(1, 'C') and (ParamCount > 1)) then
+  begin
+    ExitCode := EXITCODE_SYNTAX_ERROR;
+    MessageDlg(Format(LNG_SYNTAX, [GetOwnCmdName]), mtInformation, [mbOK], 0);
+
+    Visible := false;
+    Close;
+    Exit;
+  end;
+
+  LoadedIniFile := GetIniFileName;
+  if LoadedIniFile = '' then
+  begin
+    Visible := false;
+    Close;
+    Exit;
+  end;
+  ud2 := TUD2.Create(LoadedIniFile);
+
+  ud2.HandlePluginDir('',        '*.smp');
+  ud2.HandlePluginDir('Plugins', '*.smp');
+  ud2.HandlePluginDir('Plugins', '*.dll');
+
+  if CheckBoolParam(1, 'C') then
+  begin
+    if ud2.FulfilsEverySubterm(ParamStr(2)) then
+    begin
+      ExitCode := EXITCODE_OK;
+
+      if ParamStr(3) <> '' then UD2_RunCMD(ParamStr(3), SW_NORMAL); // Idea: SW_NORMAL changeable via parameter
+    end
+    else
+    begin
+      ExitCode := EXITCODE_TASK_NOTHING_MATCHES;
+    end;
+
+    Visible := false;
+    Close;
+    Exit;
+  end
+  else if CheckBoolParam(2, 'T') then
+  begin
+    DoRun(ParamStr(3));
+
+    Visible := false;
+    Close;
+    Exit;
+  end
+  else
+  begin
+    LoadTaskList;
+    LoadDetectedIDs;
+    LoadINITemplate;
+    LoadLoadedPluginList;
+    CheckForErrors;
+
+    Visible := true;
+    Exit;
+  end;
 end;
 
 end.

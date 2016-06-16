@@ -1,5 +1,8 @@
 unit UD2_TaskProperties;
 
+{$WARN UNSAFE_CODE OFF}
+{$WARN UNSAFE_TYPE OFF}
+
 interface
 
 uses
