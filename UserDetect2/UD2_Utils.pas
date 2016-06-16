@@ -31,12 +31,13 @@ type
 const
   // Prefixes for UD2_RunCmd()
   UD2_RUN_IN_OWN_DIRECTORY_PREFIX = '$RIOD$';
+  UD2_RUN_AS_ADMIN                = '$ADMIN$';
 
 function SplitString(const aSeparator, aString: String; aMax: Integer = 0): TArrayOfString;
 function BetterInterpreteBool(str: String): boolean;
 function GetOwnCmdName: string;
 function ExpandEnvStr(const szInput: string): string;
-procedure UD2_RunCMD(cmdLine: string; WindowMode: integer);
+procedure UD2_RunCMD(cmdLine: string; WindowMode: integer=SW_NORMAL);
 function SplitIconString(IconString: string): TIconFileIdx;
 // function GetHTML(AUrl: string): string;
 procedure VTS_CheckUpdates(VTSID, CurVer: string);
@@ -193,7 +194,7 @@ begin
   end;
 end;
 
-procedure UD2_RunCMD(cmdLine: string; WindowMode: integer);
+procedure UD2_RunCMD(cmdLine: string; WindowMode: integer=SW_NORMAL);
 // Discussion: http://stackoverflow.com/questions/32802679/acceptable-replacement-for-winexec/32804669#32804669
 // Version 1: http://pastebin.com/xQjDmyVe
 // --> CreateProcess + ShellExecuteEx
@@ -220,7 +221,7 @@ begin
   // 4. Runs EXE files without extension (e.g. "calc")
   // 5. Runs non-EXE files (e.g. "Letter.doc")
   // 6. Commands with white spaces (e.g. "C:\Program Files\xyz.exe") must be enclosed in quotes.
- 
+
   cmdLine := ExpandEnvStr(cmdLine);
 
   // Split command line from argument list
@@ -255,8 +256,10 @@ begin
     end;
   end;
 
-  if Copy(cmdLine, 1, Length(UD2_RUN_IN_OWN_DIRECTORY_PREFIX)) = UD2_RUN_IN_OWN_DIRECTORY_PREFIX then
+  if Pos(UD2_RUN_IN_OWN_DIRECTORY_PREFIX, cmdLine) >= 1 then
   begin
+    cmdLine := StringReplace(cmdLine, UD2_RUN_IN_OWN_DIRECTORY_PREFIX, '', [rfReplaceAll]);
+
     cmdLine := Copy(cmdLine, 1+Length(UD2_RUN_IN_OWN_DIRECTORY_PREFIX), Length(cmdLine)-Length(UD2_RUN_IN_OWN_DIRECTORY_PREFIX));
 
     cmdFile := ExtractFileName(cmdLine);
@@ -269,6 +272,14 @@ begin
   end;
 
   ZeroMemory(@sei, SizeOf(sei));
+
+  if Pos(UD2_RUN_AS_ADMIN, cmdLine) >= 1 then
+  begin
+    cmdLine := StringReplace(cmdLine, UD2_RUN_AS_ADMIN, '', [rfReplaceAll]);
+
+    sei.lpVerb := 'runas';
+  end;
+
   sei.cbSize       := SizeOf(sei);
   sei.lpFile       := PChar(cmdFile);
   {$IFNDEF PREFER_SHELLEXECUTEEX_MESSAGES}
@@ -285,6 +296,7 @@ end;
 
 function GetHTML(AUrl: string): string;
 // http://www.delphipraxis.net/post43515.html
+// Modificated by ViaThinkSoft
 var
   databuffer : array[0..4095] of char;
   ResStr : string;
@@ -294,11 +306,13 @@ var
   res    : pchar;
   Str    : pchar;
 begin
-  ResStr:='';
-  if system.pos('http://',lowercase(AUrl))=0 then
+  ResStr := '';
+  if system.pos('http://',lowercase(AUrl)) = 0 then
+  begin
      AUrl:='http://'+AUrl;
+  end;
 
-  // Hinzugefügt
+  // [ViaThinkSoft] Added
   Application.ProcessMessages;
 
   hSession:=InternetOpen('InetURL:/1.0',
@@ -308,21 +322,20 @@ begin
                          0);
   if assigned(hsession) then
   begin
-    // Hinzugefügt
-    application.ProcessMessages;
+    // [ViaThinkSoft] Added
+    Application.ProcessMessages;
 
-    hfile:=InternetOpenUrl(
-           hsession,
-           pchar(AUrl),
-           nil,
-           0,
-           INTERNET_FLAG_RELOAD,
-           0);
-    dwIndex  := 0;
+    hfile := InternetOpenUrl(hsession,
+                             pchar(AUrl),
+                             nil,
+                             0,
+                             INTERNET_FLAG_RELOAD,
+                             0);
+    dwIndex   := 0;
     dwCodeLen := 10;
 
-    // Hinzugefügt
-    application.ProcessMessages;
+    // [ViaThinkSoft] Added
+    Application.ProcessMessages;
 
     HttpQueryInfo(hfile,
                   HTTP_QUERY_STATUS_CODE,
@@ -339,8 +352,8 @@ begin
                               DwRead)) do
       begin
 
-        // Hinzugefügt
-        application.ProcessMessages;
+        // [ViaThinkSoft] Added
+        Application.ProcessMessages;
 
         if dwRead =0 then
           break;
@@ -373,20 +386,20 @@ resourcestring
   LNG_NEW_VERSION = 'A new version is available. Do you want to download it now?';
   LNG_NO_UPDATE = 'You already have the newest program version.';
 var
-  temp: string;
+  status: string;
 begin
-  temp := GetHTML('http://www.viathinksoft.de/update/?id='+VTSID);
-  if Copy(temp, 0, 7) = 'Status:' then
+  status := GetHTML('http://www.viathinksoft.de/update/?id='+VTSID);
+  if Copy(status, 0, 7) = 'Status:' then
   begin
     MessageDlg(LNG_DOWNLOAD_ERR, mtError, [mbOK], 0);
   end
   else
   begin
-    if GetHTML('http://www.viathinksoft.de/update/?id='+VTSID) <> CurVer then
+    if status <> CurVer then
     begin
       if MessageDlg(LNG_NEW_VERSION, mtConfirmation, mbYesNoCancel, 0) = ID_YES then
       begin
-        shellexecute(application.handle, 'open', pchar('http://www.viathinksoft.de/update/?id=@spacemission'), '', '', sw_normal);
+        shellexecute(application.handle, 'open', pchar('http://www.viathinksoft.de/update/?id=@'+VTSID), '', '', sw_normal);
       end;
     end
     else
