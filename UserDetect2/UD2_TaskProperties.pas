@@ -41,11 +41,12 @@ uses
 
 procedure TUD2TaskPropertiesForm.LoadExecutableFilesList;
 resourcestring
-  LNG_RIOD = '%s [Run in own directory]';
+  LNG_RIOD = 'Run in own directory';
+  LNG_ADMIN = 'Run as admin';
 var
   sl: TStringList;
   i: integer;
-  s: string;
+  cmdLine, flags: string;
 begin
   //fud2.GetCommandList(AShortTaskName, ListBox1.Items);
   
@@ -55,13 +56,29 @@ begin
     fud2.GetCommandList(FShortTaskName, sl);
     for i := 0 to sl.Count-1 do
     begin
-      s := sl.Strings[i];
-      if Copy(s, 1, Length(UD2_RUN_IN_OWN_DIRECTORY_PREFIX)) = UD2_RUN_IN_OWN_DIRECTORY_PREFIX then
+      cmdLine := sl.Strings[i];
+      flags := '';
+
+      if Pos(UD2_RUN_AS_ADMIN, cmdLine) >= 1 then
       begin
-        s := Copy(s, 1+Length(UD2_RUN_IN_OWN_DIRECTORY_PREFIX), Length(s)-Length(UD2_RUN_IN_OWN_DIRECTORY_PREFIX));
-        s := Format(LNG_RIOD, [s]);
+        cmdLine := StringReplace(cmdLine, UD2_RUN_AS_ADMIN, '', [rfReplaceAll]);
+        if flags <> '' then flags := flags + ', ';
+        flags := flags + LNG_ADMIN;
       end;
-      ListBox1.Items.Add(s);
+
+      if Pos(UD2_RUN_IN_OWN_DIRECTORY_PREFIX, cmdLine) >= 1 then
+      begin
+        cmdLine := StringReplace(cmdLine, UD2_RUN_IN_OWN_DIRECTORY_PREFIX, '', [rfReplaceAll]);
+        if flags <> '' then flags := flags + ', ';
+        flags := flags + LNG_RIOD;
+      end;
+
+      if flags <> '' then
+      begin
+        flags := ' [' + flags + ']';
+      end;
+
+      ListBox1.Items.Add(cmdLine + flags);
     end;
   finally
     sl.Free;

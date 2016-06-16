@@ -72,8 +72,7 @@ type
     procedure Properties1Click(Sender: TObject);
     procedure IdentificationsPopupMenuPopup(Sender: TObject);
     procedure CopyTaskDefinitionExample1Click(Sender: TObject);
-    procedure ListViewCompare(Sender: TObject; Item1, Item2: TListItem;
-      Data: Integer; var Compare: Integer);
+    procedure ListViewCompare(Sender: TObject; Item1, Item2: TListItem; Data: Integer; var Compare: Integer);
     procedure Button3Click(Sender: TObject);
     procedure LoadedPluginsPopupMenuPopup(Sender: TObject);
     procedure MenuItem1Click(Sender: TObject);
@@ -235,7 +234,7 @@ begin
     begin
       cmd := slCmds.Strings[i];
       if cmd = '' then continue;
-      UD2_RunCMD(cmd, SW_NORMAL); // IDEA: let SW_NORMAL be configurable?
+      UD2_RunCMD(cmd, SW_NORMAL); // Idea: let SW_NORMAL be configurable by the user?
     end;
   finally
     slCmds.Free;
@@ -379,7 +378,9 @@ begin
   end;
   ud2 := TUD2.Create(LoadedIniFile);
 
-  ud2.HandlePluginDir('Plugins\');
+  ud2.HandlePluginDir('',        '*.smp');
+  ud2.HandlePluginDir('Plugins', '*.smp');
+  ud2.HandlePluginDir('Plugins', '*.dll');
 
   if ParamCount >= 2 then
   begin
@@ -513,7 +514,7 @@ procedure TUD2MainForm.MenuItem1Click(Sender: TObject);
 var
   s: string;
 begin
-  s := '; '+LoadedPluginsListView.Selected.SubItems.Strings[6];
+  s := '; ' + LoadedPluginsListView.Selected.SubItems.Strings[6];
   Clipboard.AsText := s;
 end;
 

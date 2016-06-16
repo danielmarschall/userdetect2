@@ -59,8 +59,6 @@ object UD2TaskPropertiesForm: TUD2TaskPropertiesForm
     EditLabel.Width = 102
     EditLabel.Height = 13
     EditLabel.Caption = 'Section Name (intern)'
-    LabelPosition = lpAbove
-    LabelSpacing = 3
     ReadOnly = True
     TabOrder = 2
   end

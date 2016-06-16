@@ -68,15 +68,13 @@ type
     property LoadedPlugins: TObjectList{<TUD2Plugin>} read FLoadedPlugins;
     property IniFile: TMemIniFile read FIniFile;
     procedure GetCommandList(ShortTaskName: string; outSL: TStrings);
-    procedure HandlePluginDir(APluginDir: string);
+    procedure HandlePluginDir(APluginDir, AFileMask: string);
     procedure GetTaskListing(outSL: TStrings);
     constructor Create(AIniFileName: string);
     destructor Destroy; override;
     function TaskExists(ShortTaskName: string): boolean;
-    function ReadMetatagString(ShortTaskName, MetatagName: string;
-      DefaultVal: string): string;
-    function ReadMetatagBool(ShortTaskName, MetatagName: string;
-      DefaultVal: string): boolean;
+    function ReadMetatagString(ShortTaskName, MetatagName: string; DefaultVal: string): string;
+    function ReadMetatagBool(ShortTaskName, MetatagName: string; DefaultVal: string): boolean;
     function GetTaskName(AShortTaskName: string): string;
     class function GenericErrorLookup(grStatus: UD2_STATUS): string;
   end;
@@ -102,24 +100,24 @@ type
 
 class function TUD2.GenericErrorLookup(grStatus: UD2_STATUS): string;
 resourcestring
-  LNG_STATUS_OK_UNSPECIFIED               = 'Unspecified generic success';
-  LNG_STATUS_OK_SINGLELINE                = 'Operation successful; one identifier returned';
-  LNG_STATUS_OK_MULTILINE                 = 'Operation successful; multiple identifiers returned';
+  LNG_STATUS_OK_UNSPECIFIED               = 'Success (Unspecified)';
+  LNG_STATUS_OK_SINGLELINE                = 'Success (One identifier returned)';
+  LNG_STATUS_OK_MULTILINE                 = 'Success (Multiple identifiers returned)';
+  LNG_UNKNOWN_SUCCESS                     = 'Success (Unknown status code %s)';
 
-  LNG_STATUS_NOTAVAIL_UNSPECIFIED         = 'Unspecified generic "not available" status';
-  LNG_STATUS_NOTAVAIL_OS_NOT_SUPPORTED    = 'Operating system not supported';
-  LNG_STATUS_NOTAVAIL_HW_NOT_SUPPORTED    = 'Hardware not supported';
-  LNG_STATUS_NOTAVAIL_NO_ENTITIES         = 'No entities to identify';
-  LNG_STATUS_NOTAVAIL_WINAPI_CALL_FAILURE = 'A Windows API call failed. Message: %s';
+  LNG_STATUS_NOTAVAIL_UNSPECIFIED         = 'Not available (Unspecified)';
+  LNG_STATUS_NOTAVAIL_OS_NOT_SUPPORTED    = 'Not available (Operating system not supported)';
+  LNG_STATUS_NOTAVAIL_HW_NOT_SUPPORTED    = 'Not available (Hardware not supported)';
+  LNG_STATUS_NOTAVAIL_NO_ENTITIES         = 'Not available (No entities to identify)';
+  LNG_STATUS_NOTAVAIL_WINAPI_CALL_FAILURE = 'Not available (A Windows API call failed. Message: %s)';
+  LNG_UNKNOWN_NOTAVAIL                    = 'Not available (Unknown status code %s)';
 
-  LNG_STATUS_ERROR_UNSPECIFIED            = 'Unspecified generic error';
-  LNG_STATUS_ERROR_BUFFER_TOO_SMALL       = 'The provided buffer is too small!';
-  LNG_STATUS_ERROR_INVALID_ARGS           = 'The function received invalid arguments!';
-  LNG_STATUS_ERROR_PLUGIN_NOT_LICENSED    = 'The plugin is not licensed';
+  LNG_STATUS_ERROR_UNSPECIFIED            = 'Error (Unspecified)';
+  LNG_STATUS_ERROR_BUFFER_TOO_SMALL       = 'Error (The provided buffer is too small!)';
+  LNG_STATUS_ERROR_INVALID_ARGS           = 'Error (The function received invalid arguments!)';
+  LNG_STATUS_ERROR_PLUGIN_NOT_LICENSED    = 'Error (The plugin is not licensed)';
+  LNG_UNKNOWN_FAILED                      = 'Error (Unknown status code %s)';
 
-  LNG_UNKNOWN_SUCCESS                     = 'Unknown "success" status code %s';
-  LNG_UNKNOWN_NOTAVAIL                    = 'Unknown "not available" status code %s';
-  LNG_UNKNOWN_FAILED                      = 'Unknown "failure" status code %s';
   LNG_UNKNOWN_STATUS                      = 'Unknown status code with unexpected category: %s';
 begin
        if UD2_STATUS_Equal(grStatus, UD2_STATUS_OK_UNSPECIFIED, false)               then result := LNG_STATUS_OK_UNSPECIFIED
@@ -193,7 +191,7 @@ end;
 
 { TUD2 }
 
-procedure TUD2.HandlePluginDir(APluginDir: string);
+procedure TUD2.HandlePluginDir(APluginDir, AFileMask: string);
 Var
   SR: TSearchRec;
   path: string;
@@ -204,6 +202,7 @@ Var
   sPluginID, prevDLL: string;
   {$ENDIF}
   lngid: LANGID;
+  maskpath: string;
 resourcestring
   LNG_PLUGINS_SAME_GUID = 'Attention: The plugin "%s" and the plugin "%s" have the same identification GUID. The latter will not be loaded.';
 begin
@@ -213,13 +212,15 @@ begin
 
     lngID := GetSystemDefaultLangID;
 
-    path := IncludeTrailingPathDelimiter(APluginDir);
-    if FindFirst(path + '*.dll', 0, SR) = 0 then
+    path := APluginDir;
+    if path <> '' then path := IncludeTrailingPathDelimiter(path);
+
+    if FindFirst(path + AFileMask, 0, SR) = 0 then
     begin
       try
         repeat
           try
-            tob.Add(TUD2PluginLoader.Create(false, path+sr.Name, lngid));
+            tob.Add(TUD2PluginLoader.Create(false, path + sr.Name, lngid));
           except
             on E: Exception do
             begin
@@ -466,7 +467,7 @@ var
 resourcestring
   LNG_DLL_NOT_LOADED = 'Plugin DLL "%s" could not be loaded.';
   LNG_METHOD_NOT_FOUND = 'Method "%s" not found in plugin "%s". The DLL is probably not a valid plugin DLL.';
-  LNG_INVALID_PLUGIN = 'The plugin "%s" is not a valid plugin for this program version.';
+  LNG_INVALID_PLUGIN = 'The plugin "%s" is not a valid plugin for this application.';
   LNG_METHOD_FAILURE = 'Error "%s" at method "%s" of plugin "%s".';
 begin
   result := false;

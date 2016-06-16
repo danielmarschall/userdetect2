@@ -9,11 +9,9 @@ interface
 uses
   Windows, Classes, UD2_PluginIntf, UD2_PluginStatus;
 
-function UD2_WritePascalStringToPointerW(lpDestination: LPWSTR; cchSize: DWORD;
-  stSource: WideString): UD2_STATUS;
+function UD2_WritePascalStringToPointerW(lpDestination: LPWSTR; cchSize: DWORD; stSource: WideString): UD2_STATUS;
 
-function UD2_WriteStringListToPointerW(lpDestination: LPWSTR; cchSize: DWORD;
-  slSource: TStrings): UD2_STATUS;
+function UD2_WriteStringListToPointerW(lpDestination: LPWSTR; cchSize: DWORD; slSource: TStrings): UD2_STATUS;
 
 implementation
 
