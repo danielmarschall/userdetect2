@@ -24,12 +24,16 @@ function IdentificationStringW(lpIdentifier: LPWSTR; cchSize: DWORD): UD2_STATUS
 var
   stIdentifier: WideString;
 begin
-  if not GetDomainName(stIdentifier) then
-  begin
-    result := UD2_STATUS_NOTAVAIL_OS_NOT_SUPPORTED;
-    Exit;
+  try
+    if not GetDomainName(stIdentifier) then
+    begin
+      result := UD2_STATUS_NOTAVAIL_OS_NOT_SUPPORTED;
+      Exit;
+    end;
+    result := UD2_WritePascalStringToPointerW(lpIdentifier, cchSize, stIdentifier);
+  except
+    on E: Exception do result := UD2_STATUS_HandleException(E);
   end;
-  result := UD2_WritePascalStringToPointerW(lpIdentifier, cchSize, stIdentifier);
 end;
 
 function PluginNameW(lpPluginName: LPWSTR; cchSize: DWORD; wLangID: LANGID): UD2_STATUS; cdecl;

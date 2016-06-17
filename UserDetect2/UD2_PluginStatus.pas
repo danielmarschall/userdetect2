@@ -143,10 +143,27 @@ const
     dwMessage: 3;
     dwExtraInfo: 0
   );
+  UD2_STATUS_FAILURE_NO_RETURNED_VALUE: UD2_STATUS = (
+    cbSize: SizeOf(UD2_STATUS);
+    bReserved: 0;
+    wCategory: UD2_STATUSCAT_FAILED;
+    grAuthority: UD2_STATUSAUTH_GENERIC_;
+    dwMessage: 4;
+    dwExtraInfo: 0
+  );
+  UD2_STATUS_FAILURE_CATCHED_EXCEPTION: UD2_STATUS = (
+    cbSize: SizeOf(UD2_STATUS);
+    bReserved: 0;
+    wCategory: UD2_STATUSCAT_FAILED;
+    grAuthority: UD2_STATUSAUTH_GENERIC_;
+    dwMessage: 5;
+    dwExtraInfo: 0
+  );
 
 function UD2_STATUS_FormatStatusCode(grStatus: UD2_STATUS): string;
 function UD2_STATUS_Equal(grStatus1, grStatus2: UD2_STATUS; compareExtraInfo: boolean): boolean;
 function UD2_STATUS_OSError(OSError: DWORD): UD2_STATUS;
+function UD2_STATUS_HandleException(E: Exception): UD2_STATUS;
 
 implementation
 
@@ -174,6 +191,18 @@ function UD2_STATUS_OSError(OSError: DWORD): UD2_STATUS;
 begin
   result := UD2_STATUS_NOTAVAIL_WINAPI_CALL_FAILURE;
   result.dwExtraInfo := OSError;
+end;
+
+function UD2_STATUS_HandleException(E: Exception): UD2_STATUS;
+begin
+  if E is EOSError then
+  begin
+    result := UD2_STATUS_OSError(EOSError(E).ErrorCode);
+  end
+  else
+  begin
+    result := UD2_STATUS_FAILURE_CATCHED_EXCEPTION;
+  end;
 end;
 
 end.

@@ -24,22 +24,26 @@ var
   sl: TStringList;
   ec: DWORD;
 begin
-  sl := TStringList.Create;
   try
-    ec := GetGatewayIPAddressList(sl);
-    if ec = ERROR_NOT_SUPPORTED then
-    begin
-      result := UD2_STATUS_NOTAVAIL_OS_NOT_SUPPORTED;
-      Exit;
-    end
-    else if ec <> ERROR_SUCCESS then
-    begin
-      result := UD2_STATUS_OSError(ec);
-      Exit;
+    sl := TStringList.Create;
+    try
+      ec := GetGatewayIPAddressList(sl);
+      if ec = ERROR_NOT_SUPPORTED then
+      begin
+        result := UD2_STATUS_NOTAVAIL_OS_NOT_SUPPORTED;
+        Exit;
+      end
+      else if ec <> ERROR_SUCCESS then
+      begin
+        result := UD2_STATUS_OSError(ec);
+        Exit;
+      end;
+      result := UD2_WriteStringListToPointerW(lpIdentifier, cchSize, sl);
+    finally
+      sl.Free;
     end;
-    result := UD2_WriteStringListToPointerW(lpIdentifier, cchSize, sl);
-  finally
-    sl.Free;
+  except
+    on E: Exception do result := UD2_STATUS_HandleException(E);
   end;
 end;
 

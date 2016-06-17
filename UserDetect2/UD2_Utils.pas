@@ -8,11 +8,8 @@ interface
 
 {$INCLUDE 'UserDetect2.inc'}
 
-{$WARN UNSAFE_CODE OFF}
-{$WARN UNSAFE_TYPE OFF}
-
 uses
-  Windows, SysUtils, Dialogs, ShellAPI;
+  Windows, SysUtils, Dialogs, ShellAPI, Classes;
 
 const
   EXITCODE_OK = 0;
@@ -24,7 +21,7 @@ const
   EXITCODE_SYNTAX_ERROR = 13;
 
 type
-  TArrayOfString = array of String;
+  TArrayOfString = array of string;
 
   TIconFileIdx = record
     FileName: string;
@@ -36,8 +33,8 @@ const
   UD2_RUN_IN_OWN_DIRECTORY_PREFIX = '$RIOD$';
   UD2_RUN_AS_ADMIN                = '$ADMIN$';
 
-function SplitString(const aSeparator, aString: String; aMax: Integer = 0): TArrayOfString;
-function BetterInterpreteBool(str: String): boolean;
+function SplitString(const aSeparator, aString: string; aMax: Integer = 0): TArrayOfString;
+function BetterInterpreteBool(str: string): boolean;
 function GetOwnCmdName: string;
 function ExpandEnvStr(const szInput: string): string;
 procedure UD2_RunCMD(cmdLine: string; WindowMode: integer=SW_NORMAL);
@@ -46,13 +43,16 @@ function SplitIconString(IconString: string): TIconFileIdx;
 procedure VTS_CheckUpdates(VTSID, CurVer: string);
 function FormatOSError(ec: DWORD): string;
 function CheckBoolParam(idx: integer; name: string): boolean;
+function IndexOf_CS(aStrings: TStrings; aToken: String): Integer;
+function UD2_GetThreadErrorMode: DWORD;
+function UD2_SetThreadErrorMode(dwNewMode: DWORD; lpOldMode: LPDWORD): BOOL;
 
 implementation
 
 uses
   WinInet, Forms;
 
-function SplitString(const aSeparator, aString: String; aMax: Integer = 0): TArrayOfString;
+function SplitString(const aSeparator, aString: string; aMax: Integer = 0): TArrayOfString;
 // http://stackoverflow.com/a/2626991/3544341
 var
   i, strt, cnt: Integer;
@@ -120,7 +120,7 @@ begin
   SetLength(result, cnt);
 end;
 
-function BetterInterpreteBool(str: String): boolean;
+function BetterInterpreteBool(str: string): boolean;
 resourcestring
   LNG_CANNOT_INTERPRETE_BOOL = 'Cannot determinate the boolean value of "%s"';
 begin
@@ -401,7 +401,7 @@ begin
     begin
       if MessageDlg(LNG_NEW_VERSION, mtConfirmation, mbYesNoCancel, 0) = ID_YES then
       begin
-        shellexecute(application.handle, 'open', pchar('http://www.viathinksoft.de/update/?id=@'+VTSID), '', '', sw_normal);
+        shellexecute(application.handle, 'open', pchar('http://www.viathinksoft.de/update/?id=@'+VTSID), '', '', SW_Normal);
       end;
     end
     else
@@ -415,6 +415,75 @@ function CheckBoolParam(idx: integer; name: string): boolean;
 begin
   Result := ('/'+LowerCase(name) = LowerCase(ParamStr(idx))) or
             ('-'+LowerCase(name) = LowerCase(ParamStr(idx)));
+end;
+
+// function GetThreadErrorMode: DWORD; stdcall; external kernel32 name 'GetThreadErrorMode';
+function UD2_GetThreadErrorMode: DWORD;
+type
+  TFuncGetThreadErrorMode = function: DWORD; stdcall;
+var
+  dllHandle: Cardinal;
+  fGetThreadErrorMode: TFuncGetThreadErrorMode;
+begin
+  dllHandle := LoadLibrary(kernel32);
+  if dllHandle = 0 then
+  begin
+    result := 0;
+    Exit;
+  end;
+  try
+    @fGetThreadErrorMode := GetProcAddress(dllHandle, 'GetThreadErrorMode');
+    if not Assigned(fGetThreadErrorMode) then
+    begin
+      result := 0; // Windows Vista and prior
+      Exit;
+    end;
+    result := fGetThreadErrorMode();
+  finally
+    FreeLibrary(dllHandle);
+  end;
+end;
+
+// function SetThreadErrorMode(dwNewMode: DWORD; lpOldMode: LPDWORD): BOOL; stdcall; external kernel32 name 'SetThreadErrorMode';
+function UD2_SetThreadErrorMode(dwNewMode: DWORD; lpOldMode: LPDWORD): BOOL;
+type
+  TFuncSetThreadErrorMode = function(dwNewMode: DWORD; lpOldMode: LPDWORD): BOOL; stdcall;
+var
+  dllHandle: Cardinal;
+  fSetThreadErrorMode: TFuncSetThreadErrorMode;
+begin
+  dllHandle := LoadLibrary(kernel32);
+  if dllHandle = 0 then
+  begin
+    result := FALSE;
+    if Assigned(lpOldMode) then lpOldMode^ := UD2_GetThreadErrorMode;
+    Exit;
+  end;
+  try
+    @fSetThreadErrorMode := GetProcAddress(dllHandle, 'SetThreadErrorMode');
+    if not Assigned(fSetThreadErrorMode) then
+    begin
+      result := FALSE; // Windows Vista and prior
+      if Assigned(lpOldMode) then lpOldMode^ := UD2_GetThreadErrorMode;
+      Exit;
+    end;
+    result := fSetThreadErrorMode(dwNewMode, lpOldMode);
+  finally
+    FreeLibrary(dllHandle);
+  end;
+end;
+
+function IndexOf_CS(aStrings: TStrings; aToken: String): Integer;
+// Source: http://www.delphipraxis.net/888928-post15.html
+var
+  i : Integer;
+begin
+  Result := -1;
+  for i := 0 to aStrings.Count do
+    if aStrings[i]=aToken then begin
+      Result := i;
+      Break;
+    end;
 end;
 
 end.

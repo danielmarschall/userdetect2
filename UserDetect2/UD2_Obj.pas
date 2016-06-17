@@ -8,9 +8,6 @@ interface
 
 {$INCLUDE 'UserDetect2.inc'}
 
-{$WARN UNSAFE_CODE OFF}
-{$WARN UNSAFE_TYPE OFF}
-
 uses
   Windows, SysUtils, Classes, IniFiles, Contnrs, Dialogs, UD2_PluginIntf,
   UD2_PluginStatus;
@@ -23,6 +20,9 @@ type
   protected
     FDetectedIdentifications: TObjectList{<TUD2IdentificationEntry>};
   public
+    // This flag will be set if "AutoOSNotSupportedCompatibility" of the INI manifest had to be enforced/used
+    OSNotSupportedEnforced: boolean;
+    
     PluginDLL: string;
     PluginGUID: TGUID;
     PluginName: WideString;
@@ -70,11 +70,8 @@ type
     property Errors: TStrings read FErrors;
     property LoadedPlugins: TObjectList{<TUD2Plugin>} read FLoadedPlugins;
     property IniFile: TMemIniFile read FIniFile;
-
-procedure GetAllIdNames(outSL: TStrings);
-function FulfilsEverySubterm(idTerm: WideString; slIdNames: TStrings=nil): boolean;
-
-
+    procedure GetAllIdNames(outSL: TStrings);
+    function FulfilsEverySubterm(idTerm: WideString; slIdNames: TStrings=nil): boolean;
     procedure GetCommandList(ShortTaskName: string; outSL: TStrings);
     procedure HandlePluginDir(APluginDir, AFileMask: string);
     procedure GetTaskListing(outSL: TStrings);
@@ -120,10 +117,12 @@ resourcestring
   LNG_STATUS_NOTAVAIL_WINAPI_CALL_FAILURE = 'Not available (A Windows API call failed. Message: %s)';
   LNG_UNKNOWN_NOTAVAIL                    = 'Not available (Unknown status code %s)';
 
-  LNG_STATUS_ERROR_UNSPECIFIED            = 'Error (Unspecified)';
-  LNG_STATUS_ERROR_BUFFER_TOO_SMALL       = 'Error (The provided buffer is too small!)';
-  LNG_STATUS_ERROR_INVALID_ARGS           = 'Error (The function received invalid arguments!)';
-  LNG_STATUS_ERROR_PLUGIN_NOT_LICENSED    = 'Error (The plugin is not licensed)';
+  LNG_STATUS_FAILURE_UNSPECIFIED          = 'Error (Unspecified)';
+  LNG_STATUS_FAILURE_BUFFER_TOO_SMALL     = 'Error (The provided buffer is too small!)';
+  LNG_STATUS_FAILURE_INVALID_ARGS         = 'Error (The function received invalid arguments!)';
+  LNG_STATUS_FAILURE_PLUGIN_NOT_LICENSED  = 'Error (The plugin is not licensed)';
+  LNG_STATUS_FAILURE_NO_RETURNED_VALUE    = 'Error (Plugin did not return a status)';
+  LNG_STATUS_FAILURE_CATCHED_EXCEPTION    = 'Error (Catched unexpected Exception)';
   LNG_UNKNOWN_FAILED                      = 'Error (Unknown status code %s)';
 
   LNG_UNKNOWN_STATUS                      = 'Unknown status code with unexpected category: %s';
@@ -138,10 +137,12 @@ begin
   else if UD2_STATUS_Equal(grStatus, UD2_STATUS_NOTAVAIL_NO_ENTITIES, false)         then result := LNG_STATUS_NOTAVAIL_NO_ENTITIES
   else if UD2_STATUS_Equal(grStatus, UD2_STATUS_NOTAVAIL_WINAPI_CALL_FAILURE, false) then result := Format(LNG_STATUS_NOTAVAIL_WINAPI_CALL_FAILURE, [FormatOSError(grStatus.dwExtraInfo)])
 
-  else if UD2_STATUS_Equal(grStatus, UD2_STATUS_FAILURE_UNSPECIFIED, false)          then result := LNG_STATUS_ERROR_UNSPECIFIED
-  else if UD2_STATUS_Equal(grStatus, UD2_STATUS_FAILURE_BUFFER_TOO_SMALL, false)     then result := LNG_STATUS_ERROR_BUFFER_TOO_SMALL
-  else if UD2_STATUS_Equal(grStatus, UD2_STATUS_FAILURE_INVALID_ARGS, false)         then result := LNG_STATUS_ERROR_INVALID_ARGS
-  else if UD2_STATUS_Equal(grStatus, UD2_STATUS_FAILURE_PLUGIN_NOT_LICENSED, false)  then result := LNG_STATUS_ERROR_PLUGIN_NOT_LICENSED
+  else if UD2_STATUS_Equal(grStatus, UD2_STATUS_FAILURE_UNSPECIFIED, false)          then result := LNG_STATUS_FAILURE_UNSPECIFIED
+  else if UD2_STATUS_Equal(grStatus, UD2_STATUS_FAILURE_BUFFER_TOO_SMALL, false)     then result := LNG_STATUS_FAILURE_BUFFER_TOO_SMALL
+  else if UD2_STATUS_Equal(grStatus, UD2_STATUS_FAILURE_INVALID_ARGS, false)         then result := LNG_STATUS_FAILURE_INVALID_ARGS
+  else if UD2_STATUS_Equal(grStatus, UD2_STATUS_FAILURE_PLUGIN_NOT_LICENSED, false)  then result := LNG_STATUS_FAILURE_PLUGIN_NOT_LICENSED
+  else if UD2_STATUS_Equal(grStatus, UD2_STATUS_FAILURE_NO_RETURNED_VALUE, false)    then result := LNG_STATUS_FAILURE_NO_RETURNED_VALUE
+  else if UD2_STATUS_Equal(grStatus, UD2_STATUS_FAILURE_CATCHED_EXCEPTION, false)    then result := LNG_STATUS_FAILURE_CATCHED_EXCEPTION
 
   else if grStatus.wCategory = UD2_STATUSCAT_SUCCESS   then result := Format(LNG_UNKNOWN_SUCCESS,  [UD2_STATUS_FormatStatusCode(grStatus)])
   else if grStatus.wCategory = UD2_STATUSCAT_NOT_AVAIL then result := Format(LNG_UNKNOWN_NOTAVAIL, [UD2_STATUS_FormatStatusCode(grStatus)])
@@ -183,10 +184,8 @@ end;
 procedure TUD2IdentificationEntry.GetIdNames(sl: TStrings);
 begin
   sl.Add(GetPrimaryIdName);
-  sl.Add(UpperCase(Plugin.IdentificationMethodName)+':'+IdentificationString);
-  sl.Add(LowerCase(Plugin.IdentificationMethodName)+':'+IdentificationString);
-  sl.Add(UpperCase(Plugin.PluginGUIDString)+':'+IdentificationString);
-  sl.Add(LowerCase(Plugin.PluginGUIDString)+':'+IdentificationString);
+  sl.Add(Plugin.IdentificationMethodName+':'+IdentificationString);
+  sl.Add(Plugin.PluginGUIDString+':'+IdentificationString);
 end;
 
 constructor TUD2IdentificationEntry.Create(AIdentificationString: WideString;
@@ -248,17 +247,20 @@ begin
       {$IFDEF CHECK_FOR_SAME_PLUGIN_GUID}
       if Assigned(pluginLoader.pl) then
       begin
-        sPluginID := GUIDToString(pluginLoader.pl.PluginGUID);
-        prevDLL := FGUIDLookup.Values[sPluginID];
-        if (prevDLL <> '') and (prevDLL <> pluginLoader.pl.PluginDLL) then
+        if not pluginLoader.pl.OSNotSupportedEnforced then
         begin
-          Errors.Add(Format(LNG_PLUGINS_SAME_GUID, [prevDLL, pluginLoader.pl.PluginDLL]));
-          pluginLoader.pl.Free;
-        end
-        else
-        begin
-          FGUIDLookup.Values[sPluginID] := pluginLoader.pl.PluginDLL;
-          LoadedPlugins.Add(pluginLoader.pl);
+          sPluginID := GUIDToString(pluginLoader.pl.PluginGUID);
+          prevDLL := FGUIDLookup.Values[sPluginID];
+          if (prevDLL <> '') and (prevDLL <> pluginLoader.pl.PluginDLL) then
+          begin
+            Errors.Add(Format(LNG_PLUGINS_SAME_GUID, [prevDLL, pluginLoader.pl.PluginDLL]));
+            pluginLoader.pl.Free;
+          end
+          else
+          begin
+            FGUIDLookup.Values[sPluginID] := pluginLoader.pl.PluginDLL;
+            LoadedPlugins.Add(pluginLoader.pl);
+          end;
         end;
       end;
       {$ENDIF}
@@ -365,11 +367,14 @@ begin
 end;
 
 function TUD2.FulfilsEverySubterm(idTerm: WideString; slIdNames: TStrings=nil): boolean;
+const
+  CASE_SENSITIVE_FLAG = '$CASESENSITIVE$';
 var
   x: TArrayOfString;
   i: integer;
   idName: WideString;
   cleanUpStringList: boolean;
+  caseSensitive: boolean;
 begin
   cleanUpStringList := slIdNames = nil;
   try
@@ -391,7 +396,18 @@ begin
     begin
       idName := x[i];
 
-      if slIdNames.IndexOf(idName) = -1 then
+      if Pos(CASE_SENSITIVE_FLAG, idName) >= 1 then
+      begin
+        idName := StringReplace(idName, CASE_SENSITIVE_FLAG, '', [rfReplaceAll]);
+        caseSensitive := true;
+      end
+      else
+      begin
+        caseSensitive := false;
+      end;
+
+      if (not caseSensitive and (slIdNames.IndexOf(idName) = -1)) or
+         (caseSensitive and (IndexOf_CS(slIdNames, idName) = -1)) then
       begin
         result := false;
         break;
@@ -468,10 +484,6 @@ var
   sIdentifier: WideString;
   sIdentifiers: TArrayOfString;
   buf: array[0..cchBufferSize-1] of WideChar;
-  sPluginConfigFile: string;
-  iniConfig: TINIFile;
-  sOverrideGUID: string;
-  pluginIDfound: boolean;
   pluginInterfaceID: TGUID;
   dllHandle: Cardinal;
   fPluginInterfaceID: TFuncPluginInterfaceID;
@@ -486,101 +498,33 @@ var
   statusCode: UD2_STATUS;
   i: integer;
   starttime, endtime, time: cardinal;
+  bakErrorMode: DWORD;
+  err: DWORD;
 
   function _ErrorLookup(statusCode: UD2_STATUS): WideString;
   var
     ret: BOOL;
   begin
-    ret := fDescribeOwnStatusCodeW(@buf, cchBufferSize, statusCode, lngID);
-    if ret then
+    if Assigned(fDescribeOwnStatusCodeW) then
     begin
-      result := PWideChar(@buf);
-      Exit;
+      ZeroMemory(@buf, cchBufferSize);
+      ret := fDescribeOwnStatusCodeW(@buf, cchBufferSize, statusCode, lngID);
+      if ret then
+      begin
+        result := PWideChar(@buf);
+        Exit;
+      end;
     end;
     result := TUD2.GenericErrorLookup(statusCode);
   end;
 
-resourcestring
-  LNG_DLL_NOT_LOADED = 'Plugin DLL "%s" could not be loaded.';
-  LNG_METHOD_NOT_FOUND = 'Method "%s" not found in plugin "%s". The DLL is probably not a valid plugin DLL.';
-  LNG_INVALID_PLUGIN = 'The plugin "%s" is not a valid plugin for this application.';
-  LNG_METHOD_FAILURE = 'Error "%s" at method "%s" of plugin "%s".';
-begin
-  result := false;
-  startTime := GetTickCount;
-
-  dllHandle := LoadLibrary(PChar(dllFile));
-  if dllHandle = 0 then
+  function _ApplyCompatibilityGUID: boolean;
+  var
+    iniConfig: TIniFile;
+    sOverrideGUID: string;
+    sPluginConfigFile: string;
   begin
-    Errors.Add(Format(LNG_DLL_NOT_LOADED, [dllFile]));
-  end;
-  try
-    @fPluginInterfaceID := GetProcAddress(dllHandle, mnPluginInterfaceID);
-    if not Assigned(fPluginInterfaceID) then
-    begin
-      Errors.Add(Format(LNG_METHOD_NOT_FOUND, [mnPluginInterfaceID, dllFile]));
-      Exit;
-    end;
-    pluginInterfaceID := fPluginInterfaceID();
-    if not IsEqualGUID(pluginInterfaceID, GUID_USERDETECT2_IDPLUGIN_V1) then
-    begin
-      Errors.Add(Format(LNG_INVALID_PLUGIN, [dllFile]));
-      Exit;
-    end;
-
-    @fIdentificationStringW := GetProcAddress(dllHandle, mnIdentificationStringW);
-    if not Assigned(fIdentificationStringW) then
-    begin
-      Errors.Add(Format(LNG_METHOD_NOT_FOUND, [mnIdentificationStringW, dllFile]));
-      Exit;
-    end;
-
-    @fPluginNameW := GetProcAddress(dllHandle, mnPluginNameW);
-    if not Assigned(fPluginNameW) then
-    begin
-      Errors.Add(Format(LNG_METHOD_NOT_FOUND, [mnPluginNameW, dllFile]));
-      Exit;
-    end;
-
-    @fPluginVendorW := GetProcAddress(dllHandle, mnPluginVendorW);
-    if not Assigned(fPluginVendorW) then
-    begin
-      Errors.Add(Format(LNG_METHOD_NOT_FOUND, [mnPluginVendorW, dllFile]));
-      Exit;
-    end;
-
-    @fPluginVersionW := GetProcAddress(dllHandle, mnPluginVersionW);
-    if not Assigned(fPluginVersionW) then
-    begin
-      Errors.Add(Format(LNG_METHOD_NOT_FOUND, [mnPluginVersionW, dllFile]));
-      Exit;
-    end;
-
-    @fCheckLicense := GetProcAddress(dllHandle, mnCheckLicense);
-    if not Assigned(fCheckLicense) then
-    begin
-      Errors.Add(Format(LNG_METHOD_NOT_FOUND, [mnCheckLicense, dllFile]));
-      Exit;
-    end;
-
-    @fIdentificationMethodNameW := GetProcAddress(dllHandle, mnIdentificationMethodNameW);
-    if not Assigned(fIdentificationMethodNameW) then
-    begin
-      Errors.Add(Format(LNG_METHOD_NOT_FOUND, [mnIdentificationMethodNameW, dllFile]));
-      Exit;
-    end;
-
-    @fDescribeOwnStatusCodeW := GetProcAddress(dllHandle, mnDescribeOwnStatusCodeW);
-    if not Assigned(fDescribeOwnStatusCodeW) then
-    begin
-      Errors.Add(Format(LNG_METHOD_NOT_FOUND, [mnDescribeOwnStatusCodeW, dllFile]));
-      Exit;
-    end;
-
-    pl := TUD2Plugin.Create;
-    pl.PluginDLL := dllFile;
-
-    pluginIDfound := false;
+    result := false;
     sPluginConfigFile := ChangeFileExt(dllFile, '.ini');
     if FileExists(sPluginConfigFile) then
     begin
@@ -590,104 +534,263 @@ begin
         if sOverrideGUID <> '' then
         begin
           pl.PluginGUID := StringToGUID(sOverrideGUID);
-          pluginIDfound := true;
+          result := true;
         end;
       finally
         iniConfig.Free;
       end;
     end;
+  end;
 
-    if not pluginIDfound then
+  function _AutoOSNotSupportedMode: integer;
+  var
+    iniConfig: TIniFile;
+    sPluginConfigFile: string;
+  begin
+    result := 0;
+    sPluginConfigFile := ChangeFileExt(dllFile, '.ini');
+    if FileExists(sPluginConfigFile) then
     begin
-      @fPluginIdentifier := GetProcAddress(dllHandle, mnPluginIdentifier);
-      if not Assigned(fPluginIdentifier) then
-      begin
-        Errors.Add(Format(LNG_METHOD_NOT_FOUND, [mnPluginIdentifier, dllFile]));
-        Exit;
+      iniConfig := TIniFile.Create(sPluginConfigFile);
+      try
+        result := iniConfig.ReadInteger('Compatibility', 'AutoOSNotSupported', 0);
+      finally
+        iniConfig.Free;
       end;
-      pl.PluginGUID := fPluginIdentifier();
     end;
+  end;
 
-    statusCode := fCheckLicense(nil);
-    if statusCode.wCategory = UD2_STATUSCAT_FAILED then
-    begin
-      Errors.Add(Format(LNG_METHOD_FAILURE, [_ErrorLookup(statusCode), mnCheckLicense, dllFile]));
-      Exit;
-    end;
-
-    statusCode := fPluginNameW(@buf, cchBufferSize, lngID);
-         if statusCode.wCategory = UD2_STATUSCAT_SUCCESS   then pl.PluginName := PWideChar(@buf)
-    else if statusCode.wCategory = UD2_STATUSCAT_NOT_AVAIL then pl.PluginName := ''
-    else
-    begin
-      Errors.Add(Format(LNG_METHOD_FAILURE, [_ErrorLookup(statusCode), mnPluginNameW, dllFile]));
-      Exit;
-    end;
-
-    statusCode := fPluginVendorW(@buf, cchBufferSize, lngID);
-         if statusCode.wCategory = UD2_STATUSCAT_SUCCESS   then pl.PluginVendor := PWideChar(@buf)
-    else if statusCode.wCategory = UD2_STATUSCAT_NOT_AVAIL then pl.PluginVendor := ''
-    else
-    begin
-      Errors.Add(Format(LNG_METHOD_FAILURE, [_ErrorLookup(statusCode), mnPluginVendorW, dllFile]));
-      Exit;
-    end;
-
-    statusCode := fPluginVersionW(@buf, cchBufferSize, lngID);
-         if statusCode.wCategory = UD2_STATUSCAT_SUCCESS   then pl.PluginVersion := PWideChar(@buf)
-    else if statusCode.wCategory = UD2_STATUSCAT_NOT_AVAIL then pl.PluginVersion := ''
-    else
-    begin
-      Errors.Add(Format(LNG_METHOD_FAILURE, [_ErrorLookup(statusCode), mnPluginVersionW, dllFile]));
-      Exit;
-    end;
-
-    statusCode := fIdentificationMethodNameW(@buf, cchBufferSize);
-         if statusCode.wCategory = UD2_STATUSCAT_SUCCESS   then pl.IdentificationMethodName := PWideChar(@buf)
-    else if statusCode.wCategory = UD2_STATUSCAT_NOT_AVAIL then pl.IdentificationMethodName := ''
-    else
-    begin
-      Errors.Add(Format(LNG_METHOD_FAILURE, [_ErrorLookup(statusCode), mnIdentificationMethodNameW, dllFile]));
-      Exit;
-    end;
-
-    statusCode := fIdentificationStringW(@buf, cchBufferSize);
+  procedure _OverwriteStatusToOSNotSupported;
+  begin
+    pl := TUD2Plugin.Create;
+    pl.PluginDLL := dllFile;
+    statusCode := UD2_STATUS_NOTAVAIL_OS_NOT_SUPPORTED;
     pl.IdentificationProcedureStatusCode := statusCode;
     pl.IdentificationProcedureStatusCodeDescribed := _ErrorLookup(statusCode);
-    if statusCode.wCategory = UD2_STATUSCAT_SUCCESS then
+    (*
+    if not _ApplyCompatibilityGUID then
     begin
-      sIdentifier := PWideChar(@buf);
-      if UD2_STATUS_Equal(statusCode, UD2_STATUS_OK_MULTILINE, false) then
+      CreateGUID(pl.PluginGUID); // to avoid the "double GUID" error
+    end;
+    *)
+    pl.OSNotSupportedEnforced := true; // to avoid the "double GUID" error
+    result := true;
+  end;
+
+resourcestring
+  LNG_DLL_NOT_LOADED = 'Plugin DLL "%s" could not be loaded: %s';
+  LNG_METHOD_NOT_FOUND = 'Method "%s" not found in plugin "%s". The DLL is probably not a valid plugin DLL.';
+  LNG_INVALID_PLUGIN = 'The plugin "%s" is not a valid plugin for this application.';
+  LNG_METHOD_FAILURE = 'Error "%s" at method "%s" of plugin "%s".';
+  LNG_EXCEPTION = 'Fatal error while loading "%s" (%s: %s)';
+begin
+  result := false;
+  startTime := GetTickCount;
+
+  try
+    bakErrorMode := 0;
+    UD2_SetThreadErrorMode(SEM_FAILCRITICALERRORS, Pointer(bakErrorMode));
+    try
+      dllHandle := LoadLibrary(PChar(dllFile));
+      if dllHandle = 0 then
       begin
-        // Multiple identifiers (e.g. multiple MAC addresses are delimited via UD2_MULTIPLE_ITEMS_DELIMITER)
-        SetLength(sIdentifiers, 0);
-        sIdentifiers := SplitString(UD2_MULTIPLE_ITEMS_DELIMITER, sIdentifier);
-        for i := Low(sIdentifiers) to High(sIdentifiers) do
+        err := GetLastError;
+
+        if ((_AutoOSNotSupportedMode = 1) and ((err = ERROR_DLL_NOT_FOUND) or (err = ERROR_PROC_NOT_FOUND))) or
+           (_AutoOSNotSupportedMode >= 2) then
         begin
-          pl.AddIdentification(sIdentifiers[i]);
+          _OverwriteStatusToOSNotSupported;
+          Exit;
         end;
-      end
-      else
-      begin
-        pl.AddIdentification(sIdentifier);
+
+        Errors.Add(Format(LNG_DLL_NOT_LOADED, [dllFile, SysErrorMessage(err)]));
+        Exit;
       end;
-    end
-    else if statusCode.wCategory <> UD2_STATUSCAT_NOT_AVAIL then
+      try
+        @fPluginInterfaceID := GetProcAddress(dllHandle, mnPluginInterfaceID);
+        if not Assigned(fPluginInterfaceID) then
+        begin
+          Errors.Add(Format(LNG_METHOD_NOT_FOUND, [mnPluginInterfaceID, dllFile]));
+          Exit;
+        end;
+        pluginInterfaceID := fPluginInterfaceID();
+        if not IsEqualGUID(pluginInterfaceID, GUID_USERDETECT2_IDPLUGIN_V1) then
+        begin
+          Errors.Add(Format(LNG_INVALID_PLUGIN, [dllFile]));
+          Exit;
+        end;
+
+        @fIdentificationStringW := GetProcAddress(dllHandle, mnIdentificationStringW);
+        if not Assigned(fIdentificationStringW) then
+        begin
+          Errors.Add(Format(LNG_METHOD_NOT_FOUND, [mnIdentificationStringW, dllFile]));
+          Exit;
+        end;
+
+        @fPluginNameW := GetProcAddress(dllHandle, mnPluginNameW);
+        if not Assigned(fPluginNameW) then
+        begin
+          Errors.Add(Format(LNG_METHOD_NOT_FOUND, [mnPluginNameW, dllFile]));
+          Exit;
+        end;
+
+        @fPluginVendorW := GetProcAddress(dllHandle, mnPluginVendorW);
+        if not Assigned(fPluginVendorW) then
+        begin
+          Errors.Add(Format(LNG_METHOD_NOT_FOUND, [mnPluginVendorW, dllFile]));
+          Exit;
+        end;
+
+        @fPluginVersionW := GetProcAddress(dllHandle, mnPluginVersionW);
+        if not Assigned(fPluginVersionW) then
+        begin
+          Errors.Add(Format(LNG_METHOD_NOT_FOUND, [mnPluginVersionW, dllFile]));
+          Exit;
+        end;
+
+        @fCheckLicense := GetProcAddress(dllHandle, mnCheckLicense);
+        if not Assigned(fCheckLicense) then
+        begin
+          Errors.Add(Format(LNG_METHOD_NOT_FOUND, [mnCheckLicense, dllFile]));
+          Exit;
+        end;
+
+        @fIdentificationMethodNameW := GetProcAddress(dllHandle, mnIdentificationMethodNameW);
+        if not Assigned(fIdentificationMethodNameW) then
+        begin
+          Errors.Add(Format(LNG_METHOD_NOT_FOUND, [mnIdentificationMethodNameW, dllFile]));
+          Exit;
+        end;
+
+        @fDescribeOwnStatusCodeW := GetProcAddress(dllHandle, mnDescribeOwnStatusCodeW);
+        if not Assigned(fDescribeOwnStatusCodeW) then
+        begin
+          Errors.Add(Format(LNG_METHOD_NOT_FOUND, [mnDescribeOwnStatusCodeW, dllFile]));
+          Exit;
+        end;
+
+        pl := TUD2Plugin.Create;
+        pl.PluginDLL := dllFile;
+
+        if not _ApplyCompatibilityGUID then
+        begin
+          @fPluginIdentifier := GetProcAddress(dllHandle, mnPluginIdentifier);
+          if not Assigned(fPluginIdentifier) then
+          begin
+            Errors.Add(Format(LNG_METHOD_NOT_FOUND, [mnPluginIdentifier, dllFile]));
+            Exit;
+          end;
+          pl.PluginGUID := fPluginIdentifier();
+        end;
+
+        statusCode := fCheckLicense(nil);
+        if statusCode.wCategory = UD2_STATUSCAT_FAILED then
+        begin
+          Errors.Add(Format(LNG_METHOD_FAILURE, [_ErrorLookup(statusCode), mnCheckLicense, dllFile]));
+          Exit;
+        end;
+
+        ZeroMemory(@buf, cchBufferSize);
+        statusCode := fPluginNameW(@buf, cchBufferSize, lngID);
+             if statusCode.wCategory = UD2_STATUSCAT_SUCCESS   then pl.PluginName := PWideChar(@buf)
+        else if statusCode.wCategory = UD2_STATUSCAT_NOT_AVAIL then pl.PluginName := ''
+        else
+        begin
+          Errors.Add(Format(LNG_METHOD_FAILURE, [_ErrorLookup(statusCode), mnPluginNameW, dllFile]));
+          Exit;
+        end;
+
+        ZeroMemory(@buf, cchBufferSize);
+        statusCode := fPluginVendorW(@buf, cchBufferSize, lngID);
+             if statusCode.wCategory = UD2_STATUSCAT_SUCCESS   then pl.PluginVendor := PWideChar(@buf)
+        else if statusCode.wCategory = UD2_STATUSCAT_NOT_AVAIL then pl.PluginVendor := ''
+        else
+        begin
+          Errors.Add(Format(LNG_METHOD_FAILURE, [_ErrorLookup(statusCode), mnPluginVendorW, dllFile]));
+          Exit;
+        end;
+
+        ZeroMemory(@buf, cchBufferSize);
+        statusCode := fPluginVersionW(@buf, cchBufferSize, lngID);
+             if statusCode.wCategory = UD2_STATUSCAT_SUCCESS   then pl.PluginVersion := PWideChar(@buf)
+        else if statusCode.wCategory = UD2_STATUSCAT_NOT_AVAIL then pl.PluginVersion := ''
+        else
+        begin
+          Errors.Add(Format(LNG_METHOD_FAILURE, [_ErrorLookup(statusCode), mnPluginVersionW, dllFile]));
+          Exit;
+        end;
+
+        ZeroMemory(@buf, cchBufferSize);
+        statusCode := fIdentificationMethodNameW(@buf, cchBufferSize);
+             if statusCode.wCategory = UD2_STATUSCAT_SUCCESS   then pl.IdentificationMethodName := PWideChar(@buf)
+        else if statusCode.wCategory = UD2_STATUSCAT_NOT_AVAIL then pl.IdentificationMethodName := ''
+        else
+        begin
+          Errors.Add(Format(LNG_METHOD_FAILURE, [_ErrorLookup(statusCode), mnIdentificationMethodNameW, dllFile]));
+          Exit;
+        end;
+
+        ZeroMemory(@buf, cchBufferSize);
+        statusCode := UD2_STATUS_FAILURE_NO_RETURNED_VALUE; // This status will be used when the DLL does not return anything (which is an error by the developer)
+        statusCode := fIdentificationStringW(@buf, cchBufferSize);
+        pl.IdentificationProcedureStatusCode := statusCode;
+        pl.IdentificationProcedureStatusCodeDescribed := _ErrorLookup(statusCode);
+        if statusCode.wCategory = UD2_STATUSCAT_SUCCESS then
+        begin
+          sIdentifier := PWideChar(@buf);
+          if UD2_STATUS_Equal(statusCode, UD2_STATUS_OK_MULTILINE, false) then
+          begin
+            // Multiple identifiers (e.g. multiple MAC addresses are delimited via UD2_MULTIPLE_ITEMS_DELIMITER)
+            SetLength(sIdentifiers, 0);
+            sIdentifiers := SplitString(UD2_MULTIPLE_ITEMS_DELIMITER, sIdentifier);
+            for i := Low(sIdentifiers) to High(sIdentifiers) do
+            begin
+              pl.AddIdentification(sIdentifiers[i]);
+            end;
+          end
+          else
+          begin
+            pl.AddIdentification(sIdentifier);
+          end;
+        end
+        else if statusCode.wCategory <> UD2_STATUSCAT_NOT_AVAIL then
+        begin
+          if _AutoOSNotSupportedMode >= 3 then
+          begin
+            _OverwriteStatusToOSNotSupported;
+            Exit;
+          end;
+
+          // Errors.Add(Format(LNG_METHOD_FAILURE, [_ErrorLookup(statusCode), mnIdentificationStringW, dllFile]));
+          Errors.Add(Format(LNG_METHOD_FAILURE, [pl.IdentificationProcedureStatusCodeDescribed, mnIdentificationStringW, dllFile]));
+          Exit;
+        end;
+
+        result := true;
+      finally
+        if not result and Assigned(pl) then FreeAndNil(pl);
+        FreeLibrary(dllHandle);
+      end;
+    finally
+      UD2_SetThreadErrorMode(bakErrorMode, nil);
+
+      if result then
+      begin
+        endtime := GetTickCount;
+        time := endtime - starttime;
+        if endtime < starttime then time := High(Cardinal) - time;
+        pl.time := time;
+      end;
+    end;
+  except
+    // TODO: when an exception happens in a cdecl DLL, then this code is somehow not
+    // executed. Probably the memory is corrupted. Anyway, a cdecl DLL shall NEVER
+    // raise an Exception.
+    on E: Exception do
     begin
-      // Errors.Add(Format(LNG_METHOD_FAILURE, [_ErrorLookup(statusCode), mnIdentificationStringW, dllFile]));
-      Errors.Add(Format(LNG_METHOD_FAILURE, [pl.IdentificationProcedureStatusCodeDescribed, mnIdentificationStringW, dllFile]));
+      Errors.Add(Format(LNG_EXCEPTION, [dllFile, E.ClassName, E.Message]));
       Exit;
     end;
-
-    endtime := GetTickCount;
-    time := endtime - starttime;
-    if endtime < starttime then time := High(Cardinal) - time;
-    pl.time := time;
-
-    result := true;
-  finally
-    if not result and Assigned(pl) then FreeAndNil(pl);
-    FreeLibrary(dllHandle);
   end;
 end;
 

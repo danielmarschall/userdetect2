@@ -17,7 +17,14 @@ TODO
 * (idea): slow DLL files killable (via GUI)
 * splash screen because of probably slow DLLs
 * (idea) environment variable plugin case-insensitive variant?
+         OR: make a case-insensitive modifier for identTerms? (e.g. ComputerName$CASEINSENSITIVE$:johnpc)
 * (idea) command syntax: cmdline run task without spec ini
 * (idea) status for "not available (0 elements)" ?
 * guid column is not sorted correctly!
 * (idea) command syntax: <ini> /T <job> /noexec  --> returns only ExitCode, but does not run the application of the INI
+* what does the environment string =::=::\ mean?!
+* Possibility to load a different TDF after the program has already started.
+* Argument for forcing to select a TDF.
+* should the program really ask for a TDF when starting? why can't it run without TDF (in case the user only want to view the ident strings)
+* Improve compatibility for older OS (e.g. Win95)
+* Give .udp a file-type (icon)?

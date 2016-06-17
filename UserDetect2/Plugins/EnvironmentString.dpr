@@ -23,12 +23,16 @@ function IdentificationStringW(lpIdentifier: LPWSTR; cchSize: DWORD): UD2_STATUS
 var
   sl: TStringList;
 begin
-  sl := TStringList.Create;
   try
-    EnvironmentStringsToStrings(sl);
-    result := UD2_WriteStringListToPointerW(lpIdentifier, cchSize, sl);
-  finally
-    sl.Free;
+    sl := TStringList.Create;
+    try
+      EnvironmentStringsToStrings(sl);
+      result := UD2_WriteStringListToPointerW(lpIdentifier, cchSize, sl);
+    finally
+      sl.Free;
+    end;
+  except
+    on E: Exception do result := UD2_STATUS_HandleException(E);
   end;
 end;
 

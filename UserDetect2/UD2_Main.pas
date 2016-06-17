@@ -8,10 +8,6 @@ interface
 
 {$INCLUDE 'UserDetect2.inc'}
 
-{$WARN UNSAFE_CODE OFF}
-{$WARN UNSAFE_TYPE OFF}
-{$WARN UNSAFE_CAST OFF}
-
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, Grids, ValEdit, UD2_Obj, ComCtrls, ImgList, ExtCtrls,
@@ -67,7 +63,6 @@ type
     Panel2: TPanel;
     Image2: TImage;
     procedure FormDestroy(Sender: TObject);
-    procedure FormShow(Sender: TObject);
     procedure TasksListViewDblClick(Sender: TObject);
     procedure TasksListViewKeyPress(Sender: TObject; var Key: Char);
     procedure Button1Click(Sender: TObject);
@@ -82,6 +77,7 @@ type
     procedure Button3Click(Sender: TObject);
     procedure LoadedPluginsPopupMenuPopup(Sender: TObject);
     procedure MenuItem1Click(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
   protected
     ud2: TUD2;
     procedure LoadTaskList;
@@ -357,12 +353,6 @@ begin
   end;
 end;
 
-procedure TUD2MainForm.FormShow(Sender: TObject);
-begin
-  // To avoid accidental change of the default tab from the IDE VCL Designer
-  PageControl1.ActivePage := TasksTabSheet;
-end;
-
 procedure TUD2MainForm.TasksListViewDblClick(Sender: TObject);
 var
   obj: TUD2ListViewEntry;
@@ -513,8 +503,8 @@ begin
   end;
   ud2 := TUD2.Create(LoadedIniFile);
 
-  ud2.HandlePluginDir('',        '*.smp');
-  ud2.HandlePluginDir('Plugins', '*.smp');
+  ud2.HandlePluginDir('',        '*.udp');
+  ud2.HandlePluginDir('Plugins', '*.udp');
   ud2.HandlePluginDir('Plugins', '*.dll');
 
   if CheckBoolParam(1, 'C') then
@@ -553,6 +543,12 @@ begin
     Visible := true;
     Exit;
   end;
+end;
+
+procedure TUD2MainForm.FormCreate(Sender: TObject);
+begin
+  // To avoid accidental change of the default tab from the IDE VCL Designer
+  PageControl1.ActivePage := TasksTabSheet;
 end;
 
 end.

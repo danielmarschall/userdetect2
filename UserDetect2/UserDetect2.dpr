@@ -17,6 +17,7 @@ uses
 begin
   Application.Initialize;
   Application.ShowMainForm := false;
+  Application.Title := 'UserDetect2';
   Application.CreateForm(TUD2MainForm, UD2MainForm);
   UD2MainForm.Run;
   Application.Run;

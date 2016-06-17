@@ -22,8 +22,12 @@ function IdentificationStringW(lpIdentifier: LPWSTR; cchSize: DWORD): UD2_STATUS
 var
   stIdentifier: WideString;
 begin
-  stIdentifier := IntToStr(Win32MajorVersion);
-  result := UD2_WritePascalStringToPointerW(lpIdentifier, cchSize, stIdentifier);
+  try
+    stIdentifier := IntToStr(Win32MajorVersion);
+    result := UD2_WritePascalStringToPointerW(lpIdentifier, cchSize, stIdentifier);
+  except
+    on E: Exception do result := UD2_STATUS_HandleException(E);
+  end;
 end;
 
 function PluginNameW(lpPluginName: LPWSTR; cchSize: DWORD; wLangID: LANGID): UD2_STATUS; cdecl;

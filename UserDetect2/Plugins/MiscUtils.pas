@@ -12,8 +12,8 @@ function GetUserName: string;
 function GetComputerName: string;
 function ExpandEnvironmentStrings(ATemplate: string): string;
 function GetHomeDir: string;
-function GetComputerSID: string;
 procedure EnvironmentStringsToStrings(outSL: TStrings);
+function GetPlatformID: integer;
 
 implementation
 
@@ -42,7 +42,7 @@ begin
 end;
 
 function GetComputerName: string;
-// http://www.delphi-treff.de/tipps-tricks/netzwerkinternet/netzwerkeigenschaften/computernamen-des-eigenen-rechners-ermitteln/
+// Source: http://www.delphi-treff.de/tipps-tricks/netzwerkinternet/netzwerkeigenschaften/computernamen-des-eigenen-rechners-ermitteln/
 var
   Len: DWORD;
 begin
@@ -63,64 +63,6 @@ begin
   ZeroMemory(@buffer, size);
   Windows.ExpandEnvironmentStrings(PChar(ATemplate), buffer, size);
   SetString(result, buffer, lstrlen(buffer));
-end;
-
-
-
-// --- http://stackoverflow.com/a/7643383 ---
-
-function ConvertSidToStringSid(Sid: PSID; out StringSid: PChar): BOOL; stdcall;
-  external 'ADVAPI32.DLL' name {$IFDEF UNICODE} 'ConvertSidToStringSidW'{$ELSE} 'ConvertSidToStringSidA'{$ENDIF};
-
-function SIDToString(ASID: PSID): string;
-var
-  StringSid : PChar;
-begin
-  ConvertSidToStringSid(ASID, StringSid);
-  Result := string(StringSid);
-end;
-
-function GetComputerSID:string;
-var
-  Sid: PSID;
-  cbSid: DWORD;
-  cbReferencedDomainName : DWORD;
-  ReferencedDomainName: string;
-  peUse: SID_NAME_USE;
-  Success: BOOL;
-  lpSystemName : string;
-  lpAccountName: string;
-begin
-  Sid:=nil;
-  try
-    lpSystemName:='';
-    lpAccountName:=GetComputerName;
-
-    cbSid := 0;
-    cbReferencedDomainName := 0;
-    // First call to LookupAccountName to get the buffer sizes.
-    Success := LookupAccountName(PChar(lpSystemName), PChar(lpAccountName), nil, cbSid, nil, cbReferencedDomainName, peUse);
-    if (not Success) and (GetLastError = ERROR_INSUFFICIENT_BUFFER) then
-    begin
-      SetLength(ReferencedDomainName, cbReferencedDomainName);
-      Sid := AllocMem(cbSid);
-      // Second call to LookupAccountName to get the SID.
-      Success := LookupAccountName(PChar(lpSystemName), PChar(lpAccountName), Sid, cbSid, PChar(ReferencedDomainName), cbReferencedDomainName, peUse);
-      if not Success then
-      begin
-        FreeMem(Sid);
-        Sid := nil;
-        RaiseLastOSError;
-      end
-      else
-        Result := SIDToString(Sid);
-    end
-    else
-      RaiseLastOSError;
-  finally
-    if Assigned(Sid) then
-     FreeMem(Sid);
-  end;
 end;
 
 procedure EnvironmentStringsToStrings(outSL: TStrings);
@@ -148,6 +90,15 @@ begin
   ZeroMemory(@buffer, size);
   Windows.GetUserName(buffer, size);
   SetString(result, buffer, lstrlen(buffer));
+end;
+
+function GetPlatformID: integer;
+var
+  OSVersionInfo: TOSVersionInfo;
+begin
+  OSVersionInfo.dwOSVersionInfoSize := SizeOf(OSVersionInfo);
+  GetVersionEx(OSVersionInfo);
+  result := OSVersionInfo.dwPlatformID;
 end;
 
 end.

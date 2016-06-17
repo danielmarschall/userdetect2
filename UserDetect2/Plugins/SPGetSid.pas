@@ -5,6 +5,7 @@
 (* http://www.shorterpath.com                                                 *)
 (******************************************************************************)
 
+            (*** Modified and extended by ViaThinkSoft ***)
 
 {
   SID is a data structure of variable length that identifies user, group,
@@ -23,6 +24,7 @@ uses
   Windows, SysUtils;
 
 function GetCurrentUserSid: string;
+function GetComputerSID: string;
 
 implementation
 
@@ -152,6 +154,109 @@ begin
     if ObtainTextSid(hAccessToken, szSid, dwBufferLen) then
       Result := szSid;
     CloseHandle(hAccessToken);
+  end;
+end;
+
+// --- Section added by ViaThinkSoft ---
+
+function SIDToString(ASID: PSID): string;
+
+  function _FallBack: string;
+  var
+    StringSid : PChar;
+    len: DWORD;
+  begin
+    len := MAX_PATH;
+    StringSid := AllocMem(MAX_PATH);
+    ConvertSid(ASID, StringSid, len);
+    Result := string(StringSid);
+    FreeMem(StringSid);
+  end;
+
+type
+  TFuncConvertSidToStringSid = function(Sid: PSID; out StringSid: PChar): BOOL; stdcall;
+var
+  dllHandle: Cardinal;
+  fConvertSidToStringSid: TFuncConvertSidToStringSid;
+  StringSid : PChar;
+begin
+  dllHandle := LoadLibrary(advapi32);
+  if dllHandle = 0 then
+  begin
+    result := _FallBack;
+    Exit;
+  end;
+  try
+    @fConvertSidToStringSid := GetProcAddress(dllHandle, {$IFDEF UNICODE}'ConvertSidToStringSidW'{$ELSE}'ConvertSidToStringSidA'{$ENDIF});
+    if not Assigned(fConvertSidToStringSid) then
+    begin
+      result := _FallBack;
+      Exit;
+    end;
+
+    fConvertSidToStringSid(ASID, StringSid);
+    Result := string(StringSid);
+    LocalFree(HLocal(StringSid)); // added by ViaThinkSoft
+  finally
+    FreeLibrary(dllHandle);
+  end;
+end;
+
+function GetComputerName: string;
+// Source: http://www.delphi-treff.de/tipps-tricks/netzwerkinternet/netzwerkeigenschaften/computernamen-des-eigenen-rechners-ermitteln/
+var
+  Len: DWORD;
+begin
+  Len := MAX_COMPUTERNAME_LENGTH+1;
+  SetLength(Result,Len);
+  if Windows.GetComputerName(PChar(Result), Len) then
+    SetLength(Result,Len)
+  else
+    RaiseLastOSError;
+end;
+
+function GetComputerSID: string;
+// Source: http://stackoverflow.com/a/7643383
+var
+  Sid: PSID;
+  cbSid: DWORD;
+  cbReferencedDomainName : DWORD;
+  ReferencedDomainName: string;
+  peUse: SID_NAME_USE;
+  Success: BOOL;
+  lpSystemName : string;
+  lpAccountName: string;
+begin
+  result := '';
+  Sid:=nil;
+  try
+    lpSystemName:='';
+    lpAccountName:=GetComputerName;
+
+    cbSid := 0;
+    cbReferencedDomainName := 0;
+    // First call to LookupAccountName to get the buffer sizes.
+    Success := LookupAccountName(PChar(lpSystemName), PChar(lpAccountName), nil, cbSid, nil, cbReferencedDomainName, peUse);
+    if (not Success) and (GetLastError = ERROR_INSUFFICIENT_BUFFER) then
+    begin
+      SetLength(ReferencedDomainName, cbReferencedDomainName);
+      Sid := AllocMem(cbSid);
+      // Second call to LookupAccountName to get the SID.
+      Success := LookupAccountName(PChar(lpSystemName), PChar(lpAccountName), Sid, cbSid, PChar(ReferencedDomainName), cbReferencedDomainName, peUse);
+      if not Success then
+      begin
+        FreeMem(Sid);
+        Sid := nil;
+        RaiseLastOSError;
+      end
+      else
+        Result := SIDToString(Sid);
+    end
+    else
+      RaiseLastOSError;
+  finally
+    if Assigned(Sid) then
+      FreeMem(Sid);
   end;
 end;
 

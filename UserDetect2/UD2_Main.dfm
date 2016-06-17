@@ -13,8 +13,8 @@ object UD2MainForm: TUD2MainForm
   Font.Style = []
   OldCreateOrder = False
   Position = poScreenCenter
+  OnCreate = FormCreate
   OnDestroy = FormDestroy
-  OnShow = FormShow
   PixelsPerInch = 96
   TextHeight = 13
   object PageControl1: TPageControl
@@ -2153,6 +2153,7 @@ object UD2MainForm: TUD2MainForm
     DefaultExt = '.ini'
     Filter = 'Task Definition File (*.ini)|*.ini|Any file (*.*)|*.*'
     Options = [ofHideReadOnly, ofFileMustExist, ofEnableSizing]
+    Title = 'Please select the Task Definition File'
     Left = 520
     Top = 32
   end

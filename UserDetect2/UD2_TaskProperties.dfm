@@ -44,7 +44,7 @@ object UD2TaskPropertiesForm: TUD2TaskPropertiesForm
     Width = 403
     Height = 220
     Anchors = [akLeft, akTop, akRight, akBottom]
-    Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goThumbTracking]
+    Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goRowSelect, goThumbTracking]
     TabOrder = 3
     ColWidths = (
       205

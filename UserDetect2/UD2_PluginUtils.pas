@@ -6,9 +6,6 @@ interface
 {$LEGACYIFEND ON}
 {$IFEND}
 
-{$WARN UNSAFE_CODE OFF}
-{$WARN UNSAFE_TYPE OFF}
-
 uses
   Windows, Classes, UD2_PluginIntf, UD2_PluginStatus;
 
