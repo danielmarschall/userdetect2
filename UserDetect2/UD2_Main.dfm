@@ -3,7 +3,7 @@ object UD2MainForm: TUD2MainForm
   Top = 177
   Width = 784
   Height = 440
-  ActiveControl = TasksListView
+  ActiveControl = Memo1
   Caption = 'ViaThinkSoft UserDetect2'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -22,7 +22,7 @@ object UD2MainForm: TUD2MainForm
     Top = 0
     Width = 768
     Height = 402
-    ActivePage = TasksTabSheet
+    ActivePage = TabSheet5
     Align = alClient
     TabOrder = 0
     object TasksTabSheet: TTabSheet
@@ -49,6 +49,9 @@ object UD2MainForm: TUD2MainForm
     object TabSheet2: TTabSheet
       Caption = 'Identifications'
       ImageIndex = 1
+      DesignSize = (
+        760
+        374)
       object IdentificationsListView: TVTSListView
         Left = 0
         Top = 0
@@ -59,6 +62,9 @@ object UD2MainForm: TUD2MainForm
           item
             Caption = 'Description'
             Width = 100
+          end
+          item
+            Caption = 'Dyn'
           end
           item
             Caption = 'Method name'
@@ -77,6 +83,16 @@ object UD2MainForm: TUD2MainForm
         TabOrder = 0
         ViewStyle = vsReport
         OnCompare = ListViewCompare
+      end
+      object Button5: TButton
+        Left = 616
+        Top = 320
+        Width = 129
+        Height = 41
+        Anchors = [akRight, akBottom]
+        Caption = 'Test dynamic'
+        TabOrder = 1
+        OnClick = Button5Click
       end
     end
     object TabSheet3: TTabSheet
@@ -603,7 +619,7 @@ object UD2MainForm: TUD2MainForm
         Top = 64
         Width = 15
         Height = 13
-        Caption = '2.1'
+        Caption = '2.2'
       end
       object Memo1: TMemo
         Left = 264

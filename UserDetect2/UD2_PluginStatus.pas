@@ -108,6 +108,14 @@ const
     dwMessage: 4;
     dwExtraInfo: 0
   );
+  UD2_STATUS_NOTAVAIL_ONLY_ACCEPT_DYNAMIC: UD2_STATUS = (
+    cbSize: SizeOf(UD2_STATUS);
+    bReserved: 0;
+    wCategory: UD2_STATUSCAT_NOT_AVAIL;
+    grAuthority: UD2_STATUSAUTH_GENERIC_;
+    dwMessage: 5;
+    dwExtraInfo: 0
+  );
 
   (* Failure codes *)
 

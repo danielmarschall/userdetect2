@@ -4,10 +4,6 @@ unit VTSCompat;
 {$LEGACYIFEND ON}
 {$IFEND}
 
-{$WARN UNSAFE_CODE OFF}
-{$WARN UNSAFE_TYPE OFF}
-{$WARN UNSAFE_CAST OFF}
-
 interface
 
 uses

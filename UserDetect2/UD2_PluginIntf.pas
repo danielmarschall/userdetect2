@@ -13,15 +13,16 @@ const
   GUID_USERDETECT2_IDPLUGIN_V1: TGUID = '{6C26245E-F79A-416C-8C73-BEA3EC18BB6E}';
 
 const
-  mnPluginInterfaceID         = 'PluginInterfaceID';
-  mnPluginIdentifier          = 'PluginIdentifier';
-  mnPluginNameW               = 'PluginNameW';
-  mnPluginVersionW            = 'PluginVersionW';
-  mnPluginVendorW             = 'PluginVendorW';
-  mnCheckLicense              = 'CheckLicense';
-  mnIdentificationMethodNameW = 'IdentificationMethodNameW';
-  mnIdentificationStringW     = 'IdentificationStringW';
-  mnDescribeOwnStatusCodeW    = 'DescribeOwnStatusCodeW';
+  mnPluginInterfaceID            = 'PluginInterfaceID';
+  mnPluginIdentifier             = 'PluginIdentifier';
+  mnPluginNameW                  = 'PluginNameW';
+  mnPluginVersionW               = 'PluginVersionW';
+  mnPluginVendorW                = 'PluginVendorW';
+  mnCheckLicense                 = 'CheckLicense';
+  mnIdentificationMethodNameW    = 'IdentificationMethodNameW';
+  mnIdentificationStringW        = 'IdentificationStringW';
+  mnDescribeOwnStatusCodeW       = 'DescribeOwnStatusCodeW';
+  mnDynamicIdentificationStringW = 'DynamicIdentificationStringW';
 
 {$IF not Declared(LPVOID)}
 type
@@ -38,6 +39,12 @@ type
   TFuncIdentificationMethodNameW = function(lpIdentificationMethodName: LPWSTR; cchSize: DWORD): UD2_STATUS; cdecl;
   TFuncIdentificationStringW = function(lpIdentifier: LPWSTR; cchSize: DWORD): UD2_STATUS; cdecl;
   TFuncDescribeOwnStatusCodeW = function(lpErrorDescription: LPWSTR; cchSize: DWORD; statusCode: UD2_STATUS; wLangID: LANGID): BOOL; cdecl;
+
+  // Extension of the plugin API starting with version 3.
+  // We don't assign a new PluginIdentifier GUID since the methods of the old API
+  // are still valid, so an UserDetect2 2.x plugin can be still used with UserDetect2 3.x.
+  // Therefore, this function *MUST* be optional and therefore it may only be imported dynamically.
+  TFuncDynamicIdentificationStringW = function(lpIdentifier: LPWSTR; cchSize: DWORD; lpDynamicData: LPWSTR): UD2_STATUS; cdecl;
 
 const
   UD2_MULTIPLE_ITEMS_DELIMITER = #10;

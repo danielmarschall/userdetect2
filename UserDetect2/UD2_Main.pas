@@ -62,6 +62,7 @@ type
     MenuItem1: TMenuItem;
     Panel2: TPanel;
     Image2: TImage;
+    Button5: TButton;
     procedure FormDestroy(Sender: TObject);
     procedure TasksListViewDblClick(Sender: TObject);
     procedure TasksListViewKeyPress(Sender: TObject; var Key: Char);
@@ -78,6 +79,7 @@ type
     procedure LoadedPluginsPopupMenuPopup(Sender: TObject);
     procedure MenuItem1Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
+    procedure Button5Click(Sender: TObject);
   protected
     ud2: TUD2;
     procedure LoadTaskList;
@@ -280,6 +282,10 @@ begin
       with IdentificationsListView.Items.Add do
       begin
         Caption := pl.PluginName;
+        if ude.DynamicDataUsed then
+          SubItems.Add(ude.DynamicData)
+        else
+          SubItems.Add('');
         SubItems.Add(pl.IdentificationMethodName);
         SubItems.Add(ude.IdentificationString);
         SubItems.Add(GUIDToString(pl.PluginGUID));
@@ -298,6 +304,7 @@ var
   i, j: integer;
   pl: TUD2Plugin;
   ude: TUD2IdentificationEntry;
+  idNames: TStringList;
 begin
   IniTemplateMemo.Clear;
   IniTemplateMemo.Lines.Add('[ExampleTask1]');
@@ -317,7 +324,16 @@ begin
     begin
       ude := pl.DetectedIdentifications.Items[j] as TUD2IdentificationEntry;
       IniTemplateMemo.Lines.Add(Format('; %s', [ude.Plugin.PluginName]));
-      IniTemplateMemo.Lines.Add(ude.GetPrimaryIdName+'=calc.exe');
+
+      idNames := TStringList.Create;
+      try
+        ude.GetIdNames(idNames);
+        if idNames.Count >= 1 then
+          IniTemplateMemo.Lines.Add(idNames.Strings[0]+'=calc.exe');
+      finally
+        idNames.Free;
+      end;
+
     end;
   end;
 end;
@@ -549,6 +565,27 @@ procedure TUD2MainForm.FormCreate(Sender: TObject);
 begin
   // To avoid accidental change of the default tab from the IDE VCL Designer
   PageControl1.ActivePage := TasksTabSheet;
+end;
+
+procedure TUD2MainForm.Button5Click(Sender: TObject);
+var
+  idTerm: string;
+  slCmd: TStrings;
+begin
+  if InputQuery('Enter example term', 'Example: abc|||Testecho:abc=calc.exe', idTerm) then
+  begin
+    slCmd := TStringList.Create;
+    try
+      ud2.CheckTerm(idTerm, slCmd);
+      if slCmd.Count = 0 then
+        ShowMessage('No commands would be executed.')
+      else
+        showmessage('Following commands would be executed:' + #13#10#13#10 + slCmd.Text);
+    finally
+      slCmd.Free;
+    end;
+  end;
+  LoadDetectedIDs;
 end;
 
 end.

@@ -10,12 +10,16 @@ interface
 
 uses
   Windows, SysUtils, Classes, IniFiles, Contnrs, Dialogs, UD2_PluginIntf,
-  UD2_PluginStatus;
+  UD2_PluginStatus, UD2_Utils;
 
 const
   cchBufferSize = 32768;
 
+  dynamicDataDelim = '|||';
+
 type
+  TUD2IdentificationEntry = class;
+
   TUD2Plugin = class(TObject)
   protected
     FDetectedIdentifications: TObjectList{<TUD2IdentificationEntry>};
@@ -33,24 +37,31 @@ type
     // ONLY contains the non-failure status code of IdentificationStringW
     IdentificationProcedureStatusCode: UD2_STATUS;
     IdentificationProcedureStatusCodeDescribed: WideString;
-    
+
     Time: Cardinal;
     function PluginGUIDString: string;
-    property DetectedIdentifications: TObjectList{<TUD2IdentificationEntry>}
-      read FDetectedIdentifications;
+    property DetectedIdentifications: TObjectList{<TUD2IdentificationEntry>} read FDetectedIdentifications;
     destructor Destroy; override;
     constructor Create;
-    procedure AddIdentification(IdStr: WideString);
+    function AddIdentification(IdStr: WideString): TUD2IdentificationEntry;
+
+    function InvokeDynamicCheck(dynamicData: string): boolean;
+    function GetDynamicRequestResult(dynamicData: string): TArrayOfString;
+
+    function EqualsMethodNameOrGuid(idMethodNameOrGUID: string): boolean;
   end;
 
   TUD2IdentificationEntry = class(TObject)
   private
     FIdentificationString: WideString;
     FPlugin: TUD2Plugin;
+    FDynamicDataUsed: boolean;
+    FDynamicData: string;
   public
+    property DynamicDataUsed: boolean read FDynamicDataUsed write FDynamicDataUsed;
+    property DynamicData: string read FDynamicData write FDynamicData;
     property IdentificationString: WideString read FIdentificationString;
     property Plugin: TUD2Plugin read FPlugin;
-    function GetPrimaryIdName: WideString;
     procedure GetIdNames(sl: TStrings);
     constructor Create(AIdentificationString: WideString; APlugin: TUD2Plugin);
   end;
@@ -72,6 +83,8 @@ type
     property IniFile: TMemIniFile read FIniFile;
     procedure GetAllIdNames(outSL: TStrings);
     function FulfilsEverySubterm(idTerm: WideString; slIdNames: TStrings=nil): boolean;
+    procedure CheckTerm(idTermAndCmd: string; commandSLout: TStrings; slIdNames: TStrings=nil);
+    function FindPluginByMethodNameOrGuid(idMethodName: string): TUD2Plugin;
     procedure GetCommandList(ShortTaskName: string; outSL: TStrings);
     procedure HandlePluginDir(APluginDir, AFileMask: string);
     procedure GetTaskListing(outSL: TStrings);
@@ -87,19 +100,22 @@ type
 implementation
 
 uses
-  UD2_Utils;
+  Math;
 
 type
   TUD2PluginLoader = class(TThread)
   protected
     dllFile: string;
     lngID: LANGID;
+    useDynamicData: boolean;
+    dynamicData: WideString;
     procedure Execute; override;
     function HandleDLL: boolean;
   public
-    pl: TUD2Plugin;
+    pl: TUD2Plugin; // TODO: why do we need it?! can it be leaked if we use it for dynamic requests?
     Errors: TStringList;
-    constructor Create(Suspended: boolean; DLL: string; alngid: LANGID);
+    ResultIdentifiers: TArrayOfString;
+    constructor Create(Suspended: boolean; DLL: string; alngid: LANGID; useDynamicData: boolean; dynamicData: WideString);
     destructor Destroy; override;
   end;
 
@@ -115,6 +131,7 @@ resourcestring
   LNG_STATUS_NOTAVAIL_HW_NOT_SUPPORTED    = 'Not available (Hardware not supported)';
   LNG_STATUS_NOTAVAIL_NO_ENTITIES         = 'Not available (No entities to identify)';
   LNG_STATUS_NOTAVAIL_WINAPI_CALL_FAILURE = 'Not available (A Windows API call failed. Message: %s)';
+  LNG_STATUS_NOTAVAIL_ONLY_ACCEPT_DYNAMIC = 'Not available (Arguments required)';
   LNG_UNKNOWN_NOTAVAIL                    = 'Not available (Unknown status code %s)';
 
   LNG_STATUS_FAILURE_UNSPECIFIED          = 'Error (Unspecified)';
@@ -136,6 +153,7 @@ begin
   else if UD2_STATUS_Equal(grStatus, UD2_STATUS_NOTAVAIL_HW_NOT_SUPPORTED, false)    then result := LNG_STATUS_NOTAVAIL_HW_NOT_SUPPORTED
   else if UD2_STATUS_Equal(grStatus, UD2_STATUS_NOTAVAIL_NO_ENTITIES, false)         then result := LNG_STATUS_NOTAVAIL_NO_ENTITIES
   else if UD2_STATUS_Equal(grStatus, UD2_STATUS_NOTAVAIL_WINAPI_CALL_FAILURE, false) then result := Format(LNG_STATUS_NOTAVAIL_WINAPI_CALL_FAILURE, [FormatOSError(grStatus.dwExtraInfo)])
+  else if UD2_STATUS_Equal(grStatus, UD2_STATUS_NOTAVAIL_ONLY_ACCEPT_DYNAMIC, false) then result := LNG_STATUS_NOTAVAIL_ONLY_ACCEPT_DYNAMIC
 
   else if UD2_STATUS_Equal(grStatus, UD2_STATUS_FAILURE_UNSPECIFIED, false)          then result := LNG_STATUS_FAILURE_UNSPECIFIED
   else if UD2_STATUS_Equal(grStatus, UD2_STATUS_FAILURE_BUFFER_TOO_SMALL, false)     then result := LNG_STATUS_FAILURE_BUFFER_TOO_SMALL
@@ -157,9 +175,10 @@ begin
   result := UpperCase(GUIDToString(PluginGUID));
 end;
 
-procedure TUD2Plugin.AddIdentification(IdStr: WideString);
+function TUD2Plugin.AddIdentification(IdStr: WideString): TUD2IdentificationEntry;
 begin
-  DetectedIdentifications.Add(TUD2IdentificationEntry.Create(IdStr, Self))
+  result := TUD2IdentificationEntry.Create(IdStr, Self);
+  DetectedIdentifications.Add(result);
 end;
 
 destructor TUD2Plugin.Destroy;
@@ -174,18 +193,76 @@ begin
   FDetectedIdentifications := TObjectList{<TUD2IdentificationEntry>}.Create(true);
 end;
 
-{ TUD2IdentificationEntry }
-
-function TUD2IdentificationEntry.GetPrimaryIdName: WideString;
+function TUD2Plugin.InvokeDynamicCheck(dynamicData: string): boolean;
+var
+  ude: TUD2IdentificationEntry;
+  i: integer;
+  ids: TArrayOfString;
+  id: string;
 begin
-  result := Plugin.IdentificationMethodName+':'+IdentificationString;
+  result := false;
+
+  for i := 0 to FDetectedIdentifications.Count-1 do
+  begin
+    ude := FDetectedIdentifications.Items[i] as TUD2IdentificationEntry;
+    if ude.dynamicDataUsed and (ude.dynamicData = dynamicData) then
+    begin
+      // The dynamic content was already evaluated (and therefore is already added in FDetectedIdentifications).
+      Exit;
+    end;
+  end;
+
+  SetLength(ids, 0);
+  ids := GetDynamicRequestResult(dynamicData);
+
+  for i := 0 to Length(ids)-1 do
+  begin
+    id := ids[i];
+
+    ude := AddIdentification(id);
+    ude.dynamicDataUsed := true;
+    ude.dynamicData := dynamicData;
+
+    result := true;
+  end;
 end;
+
+function TUD2Plugin.GetDynamicRequestResult(dynamicData: string): TArrayOfString;
+var
+  lngID: LANGID;
+  pll: TUD2PluginLoader;
+begin
+  lngID := GetSystemDefaultLangID;
+
+  pll := TUD2PluginLoader.Create(false, PluginDLL, lngid, true, dynamicData);
+  try
+    pll.WaitFor;
+    result := pll.ResultIdentifiers;
+  finally
+    pll.Free;
+  end;
+end;
+
+function TUD2Plugin.EqualsMethodNameOrGuid(idMethodNameOrGUID: string): boolean;
+begin
+  result := SameText(IdentificationMethodName, idMethodNameOrGUID) or
+            SameText(GUIDToString(PluginGUID), idMethodNameOrGUID)
+end;
+
+{ TUD2IdentificationEntry }
 
 procedure TUD2IdentificationEntry.GetIdNames(sl: TStrings);
 begin
-  sl.Add(GetPrimaryIdName);
-  sl.Add(Plugin.IdentificationMethodName+':'+IdentificationString);
-  sl.Add(Plugin.PluginGUIDString+':'+IdentificationString);
+  if DynamicDataUsed then
+  begin
+    sl.Add(DynamicData+dynamicDataDelim+Plugin.IdentificationMethodName+':'+IdentificationString);
+    sl.Add(DynamicData+DynamicDataDelim+Plugin.PluginGUIDString+':'+IdentificationString);
+  end
+  else
+  begin
+    sl.Add(Plugin.IdentificationMethodName+':'+IdentificationString);
+    sl.Add(Plugin.PluginGUIDString+':'+IdentificationString);
+  end;
 end;
 
 constructor TUD2IdentificationEntry.Create(AIdentificationString: WideString;
@@ -226,7 +303,7 @@ begin
       try
         repeat
           try
-            tob.Add(TUD2PluginLoader.Create(false, path + sr.Name, lngid));
+            tob.Add(TUD2PluginLoader.Create(false, path + sr.Name, lngid, false, ''));
           except
             on E: Exception do
             begin
@@ -339,13 +416,14 @@ end;
 
 (*
 
-NAMING EXAMPLE: ComputerName:ABC&&User:John=calc.exe
+NAMING EXAMPLE: dynXYZ|||ComputerName:ABC&&User:John=calc.exe
 
-        idTerm:       ComputerName:ABC&&User:John
+        idTerm:       dynXYZ|||ComputerName:ABC&&User:John
         idName:       ComputerName:ABC
         IdMethodName: ComputerName
         IdStr         ABC
         cmd:          calc.exe
+        dynamicData:  dynXYZ
 
 *)
 
@@ -370,11 +448,14 @@ function TUD2.FulfilsEverySubterm(idTerm: WideString; slIdNames: TStrings=nil): 
 const
   CASE_SENSITIVE_FLAG = '$CASESENSITIVE$';
 var
-  x: TArrayOfString;
+  x, y, z: TArrayOfString;
   i: integer;
+  p: TUD2Plugin;
   idName: WideString;
   cleanUpStringList: boolean;
   caseSensitive: boolean;
+  dynamicData: string;
+  idMethodName: string;
 begin
   cleanUpStringList := slIdNames = nil;
   try
@@ -387,6 +468,7 @@ begin
     SetLength(x, 0);
     if Pos(':', idTerm) = 0 then
     begin
+      // Exclude stuff like "Description"
       result := false;
       Exit;
     end;
@@ -395,6 +477,33 @@ begin
     for i := Low(x) to High(x) do
     begin
       idName := x[i];
+
+      /// --- Start Dynamic Extension
+
+      SetLength(y, 0);
+      y := SplitString(dynamicDataDelim, idName);
+
+      if Length(y) >= 2 then
+      begin
+        dynamicData := y[0];
+
+        SetLength(z, 0);
+        z := SplitString(':', y[1]);
+        idMethodName := z[0];
+
+        p := FindPluginByMethodNameOrGuid(idMethodName);
+        if Assigned(p) then
+        begin
+          if p.InvokeDynamicCheck(dynamicData) then
+          begin
+            // Reload the identifications
+            slIdNames.Clear;
+            GetAllIdNames(slIdNames);
+          end;
+        end;
+      end;
+
+      /// --- End Dynamic Extension
 
       if Pos(CASE_SENSITIVE_FLAG, idName) >= 1 then
       begin
@@ -419,16 +528,29 @@ begin
   end;
 end;
 
+function TUD2.FindPluginByMethodNameOrGuid(idMethodName: string): TUD2Plugin;
+var
+  i: integer;
+  p: TUD2Plugin;
+begin
+  result := nil;
+  for i := 0 to LoadedPlugins.Count-1 do
+  begin
+    p := LoadedPlugins.Items[i] as TUD2Plugin;
+
+    if p.EqualsMethodNameOrGuid(idMethodName) then
+    begin
+      result := p;
+      Exit;
+    end;
+  end;
+end;
+
 procedure TUD2.GetCommandList(ShortTaskName: string; outSL: TStrings);
 var
   i: integer;
-  cmd: string;
-  idTerm: WideString;
   slSV, slIdNames: TStrings;
-  nameVal: TArrayOfString;
 begin
-  SetLength(nameVal, 0);
-
   slIdNames := TStringList.Create;
   try
     GetAllIdNames(slIdNames);
@@ -438,20 +560,45 @@ begin
       FIniFile.ReadSectionValues(ShortTaskName, slSV);
       for i := 0 to slSV.Count-1 do
       begin
-        // We are doing the interpretation of the line ourselves, because
-        // TStringList.Values[] would not allow multiple command lines with the
-        // same key (idTerm)
-        nameVal := SplitString('=', slSV.Strings[i]);
-        idTerm := nameVal[0];
-        cmd    := nameVal[1];
-
-        if FulfilsEverySubterm(idTerm, slIdNames) then outSL.Add(cmd);
+        CheckTerm(slSV.Strings[i], outSL, slIdNames);
       end;
     finally
       slSV.Free;
     end;
   finally
     slIdNames.Free;
+  end;
+end;
+
+procedure TUD2.CheckTerm(idTermAndCmd: string; commandSLout: TStrings; slIdNames: TStrings=nil);
+var
+  nameVal: TArrayOfString;
+  idTerm, cmd: string;
+  slIdNamesCreated: boolean;
+begin
+  slIdNamesCreated := false;
+  try
+    if not Assigned(slIdNames) then
+    begin
+      slIdNamesCreated := true;
+      slIdNames := TStringList.Create;
+      GetAllIdNames(slIdNames);
+    end;
+
+    SetLength(nameVal, 0);
+
+    // We are doing the interpretation of the line ourselves, because
+    // TStringList.Values[] would not allow multiple command lines with the
+    // same key (idTerm)
+    // TODO xxx: big problem when we want to check environment variables, since our idTerm would contain '=' !
+    nameVal := SplitString('=', idTermAndCmd);
+    if Length(nameVal) < 2 then exit;
+    idTerm := nameVal[0];
+    cmd    := nameVal[1];
+
+    if FulfilsEverySubterm(idTerm, slIdNames) then commandSLout.Add(cmd);
+  finally
+    if slIdNamesCreated then slIdNames.Free;
   end;
 end;
 
@@ -464,13 +611,15 @@ begin
   HandleDLL;
 end;
 
-constructor TUD2PluginLoader.Create(Suspended: boolean; DLL: string; alngid: LANGID);
+constructor TUD2PluginLoader.Create(Suspended: boolean; DLL: string; alngid: LANGID; useDynamicData: boolean; dynamicData: WideString);
 begin
   inherited Create(Suspended);
   dllfile := dll;
   pl := nil;
   Errors := TStringList.Create;
   lngid := alngid;
+  self.useDynamicData := useDynamicData;
+  Self.dynamicData := dynamicData;
 end;
 
 destructor TUD2PluginLoader.Destroy;
@@ -482,7 +631,6 @@ end;
 function TUD2PluginLoader.HandleDLL: boolean;
 var
   sIdentifier: WideString;
-  sIdentifiers: TArrayOfString;
   buf: array[0..cchBufferSize-1] of WideChar;
   pluginInterfaceID: TGUID;
   dllHandle: Cardinal;
@@ -493,6 +641,7 @@ var
   fPluginVersionW: TFuncPluginVersionW;
   fIdentificationMethodNameW: TFuncIdentificationMethodNameW;
   fIdentificationStringW: TFuncIdentificationStringW;
+  fDynamicIdentificationStringW: TFuncDynamicIdentificationStringW;
   fCheckLicense: TFuncCheckLicense;
   fDescribeOwnStatusCodeW: TFuncDescribeOwnStatusCodeW;
   statusCode: UD2_STATUS;
@@ -504,6 +653,7 @@ var
   function _ErrorLookup(statusCode: UD2_STATUS): WideString;
   var
     ret: BOOL;
+    buf: array[0..cchBufferSize-1] of WideChar;
   begin
     if Assigned(fDescribeOwnStatusCodeW) then
     begin
@@ -620,11 +770,28 @@ begin
           Exit;
         end;
 
-        @fIdentificationStringW := GetProcAddress(dllHandle, mnIdentificationStringW);
-        if not Assigned(fIdentificationStringW) then
+        fDynamicIdentificationStringW := nil;
+        fIdentificationStringW := nil;
+        if useDynamicData then
         begin
-          Errors.Add(Format(LNG_METHOD_NOT_FOUND, [mnIdentificationStringW, dllFile]));
-          Exit;
+          @fDynamicIdentificationStringW := GetProcAddress(dllHandle, mnDynamicIdentificationStringW);
+          if not Assigned(fDynamicIdentificationStringW) then
+          begin
+            // TODO xxx: Darf hier ein fataler Fehler entstehen, obwohl dieses Szenario nur durch die INI file auftreten kann?
+            // TODO (allgemein): In der Modulübersicht soll auch gezeigt werden, ob dieses Modul dynamischen Content erlaubt.
+            // TODO (allgemein): doku
+            Errors.Add(Format(LNG_METHOD_NOT_FOUND, [mnDynamicIdentificationStringW, dllFile]));
+            Exit;
+          end;
+        end
+        else
+        begin
+          @fIdentificationStringW := GetProcAddress(dllHandle, mnIdentificationStringW);
+          if not Assigned(fIdentificationStringW) then
+          begin
+            Errors.Add(Format(LNG_METHOD_NOT_FOUND, [mnIdentificationStringW, dllFile]));
+            Exit;
+          end;
         end;
 
         @fPluginNameW := GetProcAddress(dllHandle, mnPluginNameW);
@@ -732,7 +899,14 @@ begin
 
         ZeroMemory(@buf, cchBufferSize);
         statusCode := UD2_STATUS_FAILURE_NO_RETURNED_VALUE; // This status will be used when the DLL does not return anything (which is an error by the developer)
-        statusCode := fIdentificationStringW(@buf, cchBufferSize);
+        if useDynamicData then
+        begin
+          statusCode := fDynamicIdentificationStringW(@buf, cchBufferSize, PWideChar(dynamicData));
+        end
+        else
+        begin
+          statusCode := fIdentificationStringW(@buf, cchBufferSize);
+        end;
         pl.IdentificationProcedureStatusCode := statusCode;
         pl.IdentificationProcedureStatusCodeDescribed := _ErrorLookup(statusCode);
         if statusCode.wCategory = UD2_STATUSCAT_SUCCESS then
@@ -741,16 +915,19 @@ begin
           if UD2_STATUS_Equal(statusCode, UD2_STATUS_OK_MULTILINE, false) then
           begin
             // Multiple identifiers (e.g. multiple MAC addresses are delimited via UD2_MULTIPLE_ITEMS_DELIMITER)
-            SetLength(sIdentifiers, 0);
-            sIdentifiers := SplitString(UD2_MULTIPLE_ITEMS_DELIMITER, sIdentifier);
-            for i := Low(sIdentifiers) to High(sIdentifiers) do
+            SetLength(ResultIdentifiers, 0);
+            ResultIdentifiers := SplitString(UD2_MULTIPLE_ITEMS_DELIMITER, sIdentifier);
+            for i := Low(ResultIdentifiers) to High(ResultIdentifiers) do
             begin
-              pl.AddIdentification(sIdentifiers[i]);
+              pl.AddIdentification(ResultIdentifiers[i]);
             end;
           end
           else
           begin
             pl.AddIdentification(sIdentifier);
+
+            SetLength(ResultIdentifiers, 1);
+            ResultIdentifiers[0] := sIdentifier;
           end;
         end
         else if statusCode.wCategory <> UD2_STATUSCAT_NOT_AVAIL then

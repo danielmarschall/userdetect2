@@ -1,8 +1,5 @@
 unit VTSListView;
 
-{$WARN UNSAFE_CODE OFF}
-{$WARN UNSAFE_TYPE OFF}
-
 interface
 
 // This ListView adds support for sorting arrows
