@@ -28,3 +28,5 @@ TODO
 * should the program really ask for a TDF when starting? why can't it run without TDF (in case the user only want to view the ident strings)
 * Improve compatibility for older OS (e.g. Win95)
 * Give .udp a file-type (icon)?
+* TDF in XML?
+* mehrere commandos aufrufen in einer einzigen zeile, ohne BAT ?

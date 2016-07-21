@@ -12,11 +12,6 @@ uses
   Windows, SysUtils, Classes, IniFiles, Contnrs, Dialogs, UD2_PluginIntf,
   UD2_PluginStatus, UD2_Utils;
 
-const
-  cchBufferSize = 32768;
-
-  dynamicDataDelim = '|||';
-
 type
   TUD2IdentificationEntry = class;
 
@@ -81,7 +76,7 @@ type
     property Errors: TStrings read FErrors;
     property LoadedPlugins: TObjectList{<TUD2Plugin>} read FLoadedPlugins;
     property IniFile: TMemIniFile read FIniFile;
-    procedure GetAllIdNames(outSL: TStrings);
+    procedure GetAllDetectedIDs(outSL: TStrings);
     function FulfilsEverySubterm(idTerm: WideString; slIdNames: TStrings=nil): boolean;
     procedure CheckTerm(idTermAndCmd: string; commandSLout: TStrings; slIdNames: TStrings=nil);
     function FindPluginByMethodNameOrGuid(idMethodName: string): TUD2Plugin;
@@ -101,6 +96,9 @@ implementation
 
 uses
   Math;
+
+const
+  cchBufferSize = 32768;
 
 type
   TUD2PluginLoader = class(TThread)
@@ -255,8 +253,8 @@ procedure TUD2IdentificationEntry.GetIdNames(sl: TStrings);
 begin
   if DynamicDataUsed then
   begin
-    sl.Add(DynamicData+dynamicDataDelim+Plugin.IdentificationMethodName+':'+IdentificationString);
-    sl.Add(DynamicData+DynamicDataDelim+Plugin.PluginGUIDString+':'+IdentificationString);
+    sl.Add(Plugin.IdentificationMethodName+'('+DynamicData+'):'+IdentificationString);
+    sl.Add(Plugin.PluginGUIDString+'('+DynamicData+'):'+IdentificationString);
   end
   else
   begin
@@ -416,9 +414,9 @@ end;
 
 (*
 
-NAMING EXAMPLE: dynXYZ|||ComputerName:ABC&&User:John=calc.exe
+NAMING EXAMPLE: $CASESENSITIVE$ComputerName(dynXYZ):ABC&&User:John=calc.exe$RIOD$
 
-        idTerm:       dynXYZ|||ComputerName:ABC&&User:John
+        idTerm:       ComputerName(dynXYZ):ABC&&User:John
         idName:       ComputerName:ABC
         IdMethodName: ComputerName
         IdStr         ABC
@@ -427,7 +425,7 @@ NAMING EXAMPLE: dynXYZ|||ComputerName:ABC&&User:John=calc.exe
 
 *)
 
-procedure TUD2.GetAllIdNames(outSL: TStrings);
+procedure TUD2.GetAllDetectedIDs(outSL: TStrings);
 var
   i, j: integer;
   pl: TUD2Plugin;
@@ -448,7 +446,7 @@ function TUD2.FulfilsEverySubterm(idTerm: WideString; slIdNames: TStrings=nil): 
 const
   CASE_SENSITIVE_FLAG = '$CASESENSITIVE$';
 var
-  x, y, z: TArrayOfString;
+  x, a, b: TArrayOfString;
   i: integer;
   p: TUD2Plugin;
   idName: WideString;
@@ -462,7 +460,7 @@ begin
     if cleanUpStringList then
     begin
       slIdNames := TStringList.Create;
-      GetAllIdNames(slIdNames);
+      GetAllDetectedIDs(slIdNames);
     end;
 
     SetLength(x, 0);
@@ -480,25 +478,30 @@ begin
 
       /// --- Start Dynamic Extension
 
-      SetLength(y, 0);
-      y := SplitString(dynamicDataDelim, idName);
+      // xxxxxx ( xxxxx ):  xxxxxxxxxxxx
+      // xxxxx  ( xx:xx ):  xxxxx:xxx(x)
+      // xxxxxxxxxxxx    :  xxxxx(xxx)xx
 
-      if Length(y) >= 2 then
+      SetLength(a, 0);
+      a := SplitString('(', idName);
+      if (Length(a) >= 2) and (Pos(':', a[0]) = 0) then
       begin
-        dynamicData := y[0];
-
-        SetLength(z, 0);
-        z := SplitString(':', y[1]);
-        idMethodName := z[0];
-
-        p := FindPluginByMethodNameOrGuid(idMethodName);
-        if Assigned(p) then
+        SetLength(b, 0);
+        b := SplitString('):', a[1]);
+        if Length(b) >= 2 then
         begin
-          if p.InvokeDynamicCheck(dynamicData) then
+          dynamicData := b[0];
+          idMethodName := a[0];
+
+          p := FindPluginByMethodNameOrGuid(idMethodName);
+          if Assigned(p) then
           begin
-            // Reload the identifications
-            slIdNames.Clear;
-            GetAllIdNames(slIdNames);
+            if p.InvokeDynamicCheck(dynamicData) then
+            begin
+              // Reload the identifications
+              slIdNames.Clear;
+              GetAllDetectedIDs(slIdNames);
+            end;
           end;
         end;
       end;
@@ -553,7 +556,7 @@ var
 begin
   slIdNames := TStringList.Create;
   try
-    GetAllIdNames(slIdNames);
+    GetAllDetectedIDs(slIdNames);
 
     slSV := TStringList.Create;
     try
@@ -582,7 +585,7 @@ begin
     begin
       slIdNamesCreated := true;
       slIdNames := TStringList.Create;
-      GetAllIdNames(slIdNames);
+      GetAllDetectedIDs(slIdNames);
     end;
 
     SetLength(nameVal, 0);

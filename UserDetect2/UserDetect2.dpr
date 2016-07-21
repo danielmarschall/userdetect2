@@ -8,7 +8,8 @@ uses
   UD2_PluginUtils in 'UD2_PluginUtils.pas',
   UD2_Obj in 'UD2_Obj.pas',
   UD2_Utils in 'UD2_Utils.pas',
-  UD2_PluginStatus in 'UD2_PluginStatus.pas';
+  UD2_PluginStatus in 'UD2_PluginStatus.pas',
+  UD2_Parsing in 'UD2_Parsing.pas';
 
 {$R WindowsXP.res}
 

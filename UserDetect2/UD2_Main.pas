@@ -572,7 +572,9 @@ var
   idTerm: string;
   slCmd: TStrings;
 begin
-  if InputQuery('Enter example term', 'Example: abc|||Testecho:abc=calc.exe', idTerm) then
+  // TODO xxx: Auch eine Möglichkeit geben, einfach nur "Testecho(abc)" einzugeben und es kommt was bei raus
+
+  if InputQuery('Enter example term', 'Example: Testecho(abc):abc=calc.exe', idTerm) then
   begin
     slCmd := TStringList.Create;
     try
