@@ -101,7 +101,7 @@ implementation
 {$R *.dfm}
 
 uses
-  ShellAPI, Clipbrd, Math, AlphaNumSort, UD2_Utils, UD2_TaskProperties;
+  ShellAPI, Clipbrd, Math, AlphaNumSort, UD2_Utils, UD2_TaskProperties, UD2_Parsing;
 
 type
   TUD2ListViewEntry = class(TObject)
@@ -212,9 +212,8 @@ resourcestring
   LNG_TASK_NOT_EXISTS = 'The task "%s" does not exist in the INI file.';
   LNG_NOTHING_MATCHES = 'No identification string matches to your environment. No application was launched. Please check the Task Definition File.';
 var
-  slCmds: TStringList;
   i: integer;
-  cmd: string;
+  cmds: TUD2CommandArray;
 begin
   if not ud2.TaskExists(ShortTaskName) then
   begin
@@ -224,24 +223,18 @@ begin
     Exit;
   end;
 
-  slCmds := TStringList.Create;
-  try
-    ud2.GetCommandList(ShortTaskName, slCmds);
+  SetLength(cmds, 0);
+  cmds := ud2.GetCommandList(ShortTaskName);
 
-    if (slCmds.Count = 0) and ud2.ReadMetatagBool(ShortTaskName, TagWarnIfNothingMatches, DefaultWarnIfNothingMatches) then
-    begin
-      MessageDlg(LNG_NOTHING_MATCHES, mtWarning, [mbOK], 0);
-      ExitCode := EXITCODE_TASK_NOTHING_MATCHES;
-    end;
+  if (Length(cmds) = 0) and ud2.ReadMetatagBool(ShortTaskName, TagWarnIfNothingMatches, DefaultWarnIfNothingMatches) then
+  begin
+    MessageDlg(LNG_NOTHING_MATCHES, mtWarning, [mbOK], 0);
+    ExitCode := EXITCODE_TASK_NOTHING_MATCHES;
+  end;
 
-    for i := 0 to slCmds.Count-1 do
-    begin
-      cmd := slCmds.Strings[i];
-      if cmd = '' then continue;
-      UD2_RunCMD(cmd, SW_NORMAL); // Idea: Let SW_NORMAL be configurable by the user?
-    end;
-  finally
-    slCmds.Free;
+  for i := Low(cmds) to High(cmds) do
+  begin
+    UD2_RunCMD(cmds[i]);
   end;
 end;
 
@@ -388,8 +381,14 @@ begin
 end;
 
 procedure TUD2MainForm.Button1Click(Sender: TObject);
+var
+  cmd: TUD2Command;
 begin
-  UD2_RunCMD(ud2.IniFileName, SW_NORMAL);
+  cmd.executable := ud2.IniFileName;
+  cmd.runAsAdmin := false;
+  cmd.runInOwnDirectory := false;
+  cmd.windowMode := SW_NORMAL;
+  UD2_RunCMD(cmd);
 end;
 
 procedure TUD2MainForm.Button2Click(Sender: TObject);
@@ -402,14 +401,19 @@ end;
 
 procedure TUD2MainForm.URLLabelClick(Sender: TObject);
 var
-  s: string;
+  cmd: TUD2Command;
 begin
-  s := TLabel(Sender).Caption;
-  if Pos('@', s) > 0 then
-    s := 'mailto:' + s
+  cmd.executable := TLabel(Sender).Caption;
+  if Pos('@', cmd.executable) > 0 then
+    cmd.executable := 'mailto:' + cmd.executable
   else
-    s := 'http://' + s;
-  UD2_RunCMD(s, SW_NORMAL);
+    cmd.executable := 'http://' + cmd.executable;
+
+  cmd.runAsAdmin := false;
+  cmd.runInOwnDirectory := false;
+  cmd.windowMode := SW_NORMAL;
+
+  UD2_RunCMD(cmd);
 end;
 
 procedure TUD2MainForm.TasksPopupMenuPopup(Sender: TObject);
@@ -529,7 +533,10 @@ begin
     begin
       ExitCode := EXITCODE_OK;
 
-      if ParamStr(3) <> '' then UD2_RunCMD(ParamStr(3), SW_NORMAL); // Idea: SW_NORMAL changeable via parameter
+      if ParamStr(3) <> '' then
+      begin
+        UD2_RunCMD(UD2P_DecodeCommand(ParamStr(3)));
+      end;
     end
     else
     begin
@@ -570,22 +577,27 @@ end;
 procedure TUD2MainForm.Button5Click(Sender: TObject);
 var
   idTerm: string;
-  slCmd: TStrings;
+  cmds: TUD2CommandArray;
+  sCmds: string;
+  i: integer;
 begin
   // TODO xxx: Auch eine Möglichkeit geben, einfach nur "Testecho(abc)" einzugeben und es kommt was bei raus
 
   if InputQuery('Enter example term', 'Example: Testecho(abc):abc=calc.exe', idTerm) then
   begin
-    slCmd := TStringList.Create;
-    try
-      ud2.CheckTerm(idTerm, slCmd);
-      if slCmd.Count = 0 then
-        ShowMessage('No commands would be executed.')
-      else
-        showmessage('Following commands would be executed:' + #13#10#13#10 + slCmd.Text);
-    finally
-      slCmd.Free;
+    SetLength(cmds, 0);
+    cmds := ud2.CheckTerm(idTerm);
+
+    sCmds := '';
+    for i := Low(cmds) to High(cmds) do
+    begin
+      sCmds := sCmds + cmds[i].executable + #13#10;
     end;
+
+    if Length(cmds) = 0 then
+      ShowMessage('No commands would be executed.')
+    else
+      showmessage('Following commands would be executed:' + #13#10#13#10 + sCmds);
   end;
   LoadDetectedIDs;
 end;

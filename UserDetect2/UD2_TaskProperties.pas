@@ -37,51 +37,47 @@ implementation
 {$R *.dfm}
 
 uses
-  UD2_Utils, UD2_Main, ShellAPI;
+  UD2_Utils, UD2_Main, UD2_Parsing, ShellAPI;
 
 procedure TUD2TaskPropertiesForm.LoadExecutableFilesList;
 resourcestring
   LNG_RIOD = 'Run in own directory';
   LNG_ADMIN = 'Run as admin';
 var
-  sl: TStringList;
   i: integer;
-  cmdLine, flags: string;
+  flags: string;
+  cmds: TUD2CommandArray;
+  cmd: TUD2Command;
 begin
   //fud2.GetCommandList(AShortTaskName, ListBox1.Items);
-  
+
   ListBox1.Clear;
-  sl := TStringList.Create;
-  try
-    fud2.GetCommandList(FShortTaskName, sl);
-    for i := 0 to sl.Count-1 do
+  cmds := fud2.GetCommandList(FShortTaskName);
+
+  for i := Low(cmds) to High(cmds) do
+  begin
+    cmd := cmds[i];
+
+    flags := '';
+
+    if cmd.runAsAdmin then
     begin
-      cmdLine := sl.Strings[i];
-      flags := '';
-
-      if Pos(UD2_RUN_AS_ADMIN, cmdLine) >= 1 then
-      begin
-        cmdLine := StringReplace(cmdLine, UD2_RUN_AS_ADMIN, '', [rfReplaceAll]);
-        if flags <> '' then flags := flags + ', ';
-        flags := flags + LNG_ADMIN;
-      end;
-
-      if Pos(UD2_RUN_IN_OWN_DIRECTORY_PREFIX, cmdLine) >= 1 then
-      begin
-        cmdLine := StringReplace(cmdLine, UD2_RUN_IN_OWN_DIRECTORY_PREFIX, '', [rfReplaceAll]);
-        if flags <> '' then flags := flags + ', ';
-        flags := flags + LNG_RIOD;
-      end;
-
-      if flags <> '' then
-      begin
-        flags := ' [' + flags + ']';
-      end;
-
-      ListBox1.Items.Add(cmdLine + flags);
+      if flags <> '' then flags := flags + ', ';
+      flags := flags + LNG_ADMIN;
     end;
-  finally
-    sl.Free;
+
+    if cmd.runInOwnDirectory then
+    begin
+      if flags <> '' then flags := flags + ', ';
+      flags := flags + LNG_RIOD;
+    end;
+
+    if flags <> '' then
+    begin
+      flags := ' [' + flags + ']';
+    end;
+
+    ListBox1.Items.Add(cmd.executable + flags);
   end;
 end;
 
@@ -134,8 +130,14 @@ begin
 end;
 
 procedure TUD2TaskPropertiesForm.Button1Click(Sender: TObject);
+var
+  cmd: TUD2Command;
 begin
-  UD2_RunCMD(fud2.IniFileName, SW_NORMAL);
+  cmd.executable := fud2.IniFileName;
+  cmd.runAsAdmin := false;
+  cmd.runInOwnDirectory := false;
+  cmd.windowMode := SW_NORMAL;
+  UD2_RunCMD(cmd);
 end;
 
 end.

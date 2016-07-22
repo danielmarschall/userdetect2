@@ -10,7 +10,7 @@ interface
 
 uses
   Windows, SysUtils, Classes, IniFiles, Contnrs, Dialogs, UD2_PluginIntf,
-  UD2_PluginStatus, UD2_Utils;
+  UD2_PluginStatus, UD2_Utils, UD2_Parsing;
 
 type
   TUD2IdentificationEntry = class;
@@ -77,10 +77,11 @@ type
     property LoadedPlugins: TObjectList{<TUD2Plugin>} read FLoadedPlugins;
     property IniFile: TMemIniFile read FIniFile;
     procedure GetAllDetectedIDs(outSL: TStrings);
-    function FulfilsEverySubterm(idTerm: WideString; slIdNames: TStrings=nil): boolean;
-    procedure CheckTerm(idTermAndCmd: string; commandSLout: TStrings; slIdNames: TStrings=nil);
+    function FulfilsEverySubterm(conds: TUD2TDFConditionArray; slIdNames: TStrings=nil): boolean; overload;
+    function FulfilsEverySubterm(idTerm: WideString; slIdNames: TStrings=nil): boolean; overload;
+    function CheckTerm(idTermAndCmd: string; slIdNames: TStrings=nil): TUD2CommandArray;
     function FindPluginByMethodNameOrGuid(idMethodName: string): TUD2Plugin;
-    procedure GetCommandList(ShortTaskName: string; outSL: TStrings);
+    function GetCommandList(ShortTaskName: string): TUD2CommandArray;
     procedure HandlePluginDir(APluginDir, AFileMask: string);
     procedure GetTaskListing(outSL: TStrings);
     constructor Create(AIniFileName: string);
@@ -250,17 +251,17 @@ end;
 { TUD2IdentificationEntry }
 
 procedure TUD2IdentificationEntry.GetIdNames(sl: TStrings);
+var
+  cond: TUD2TDFCondition;
 begin
-  if DynamicDataUsed then
-  begin
-    sl.Add(Plugin.IdentificationMethodName+'('+DynamicData+'):'+IdentificationString);
-    sl.Add(Plugin.PluginGUIDString+'('+DynamicData+'):'+IdentificationString);
-  end
-  else
-  begin
-    sl.Add(Plugin.IdentificationMethodName+':'+IdentificationString);
-    sl.Add(Plugin.PluginGUIDString+':'+IdentificationString);
-  end;
+  cond.idMethodName := Plugin.IdentificationMethodName;
+  cond.idStr := IdentificationString;
+  cond.dynamicDataUsed := DynamicDataUsed;
+  cond.dynamicData := DynamicData;
+  sl.Add(UD2_CondToStr(cond));
+
+  cond.idMethodName := Plugin.PluginGUIDString;
+  sl.Add(UD2_CondToStr(cond));
 end;
 
 constructor TUD2IdentificationEntry.Create(AIdentificationString: WideString;
@@ -442,18 +443,19 @@ begin
   end;
 end;
 
+function TUD2.FulfilsEverySubterm(conds: TUD2TDFConditionArray; slIdNames: TStrings=nil): boolean;
+begin
+  result := FulfilsEverySubterm(UD2_CondsToStr(conds), slIdNames);
+end;
+
 function TUD2.FulfilsEverySubterm(idTerm: WideString; slIdNames: TStrings=nil): boolean;
-const
-  CASE_SENSITIVE_FLAG = '$CASESENSITIVE$';
 var
-  x, a, b: TArrayOfString;
   i: integer;
   p: TUD2Plugin;
-  idName: WideString;
   cleanUpStringList: boolean;
-  caseSensitive: boolean;
-  dynamicData: string;
-  idMethodName: string;
+  conds: TUD2TDFConditionArray;
+  cond: TUD2TDFCondition;
+  idName: string;
 begin
   cleanUpStringList := slIdNames = nil;
   try
@@ -463,63 +465,31 @@ begin
       GetAllDetectedIDs(slIdNames);
     end;
 
-    SetLength(x, 0);
-    if Pos(':', idTerm) = 0 then
-    begin
-      // Exclude stuff like "Description"
-      result := false;
-      Exit;
-    end;
-    x := SplitString('&&', idTerm);
+    conds := UD2P_ParseConditions(idTerm);
+
     result := true;
-    for i := Low(x) to High(x) do
+    for i := Low(conds) to High(conds) do
     begin
-      idName := x[i];
+      cond := conds[i];
 
-      /// --- Start Dynamic Extension
-
-      // xxxxxx ( xxxxx ):  xxxxxxxxxxxx
-      // xxxxx  ( xx:xx ):  xxxxx:xxx(x)
-      // xxxxxxxxxxxx    :  xxxxx(xxx)xx
-
-      SetLength(a, 0);
-      a := SplitString('(', idName);
-      if (Length(a) >= 2) and (Pos(':', a[0]) = 0) then
+      if cond.dynamicDataUsed then
       begin
-        SetLength(b, 0);
-        b := SplitString('):', a[1]);
-        if Length(b) >= 2 then
+        p := FindPluginByMethodNameOrGuid(cond.idMethodName);
+        if Assigned(p) then
         begin
-          dynamicData := b[0];
-          idMethodName := a[0];
-
-          p := FindPluginByMethodNameOrGuid(idMethodName);
-          if Assigned(p) then
+          if p.InvokeDynamicCheck(cond.dynamicData) then
           begin
-            if p.InvokeDynamicCheck(dynamicData) then
-            begin
-              // Reload the identifications
-              slIdNames.Clear;
-              GetAllDetectedIDs(slIdNames);
-            end;
+            // Reload the identifications
+            slIdNames.Clear;
+            GetAllDetectedIDs(slIdNames);
           end;
         end;
       end;
 
-      /// --- End Dynamic Extension
+      idName := UD2_CondToStr(cond);
 
-      if Pos(CASE_SENSITIVE_FLAG, idName) >= 1 then
-      begin
-        idName := StringReplace(idName, CASE_SENSITIVE_FLAG, '', [rfReplaceAll]);
-        caseSensitive := true;
-      end
-      else
-      begin
-        caseSensitive := false;
-      end;
-
-      if (not caseSensitive and (slIdNames.IndexOf(idName) = -1)) or
-         (caseSensitive and (IndexOf_CS(slIdNames, idName) = -1)) then
+      if (not cond.caseSensitive and (slIdNames.IndexOf(idName) = -1)) or
+         (cond.caseSensitive and (IndexOf_CS(slIdNames, idName) = -1)) then
       begin
         result := false;
         break;
@@ -549,11 +519,15 @@ begin
   end;
 end;
 
-procedure TUD2.GetCommandList(ShortTaskName: string; outSL: TStrings);
+function TUD2.GetCommandList(ShortTaskName: string): TUD2CommandArray;
 var
-  i: integer;
+  i, j, l: integer;
   slSV, slIdNames: TStrings;
+  tmpCmds: TUD2CommandArray;
 begin
+  SetLength(result, 0);
+  SetLength(tmpCmds, 0);
+
   slIdNames := TStringList.Create;
   try
     GetAllDetectedIDs(slIdNames);
@@ -563,7 +537,13 @@ begin
       FIniFile.ReadSectionValues(ShortTaskName, slSV);
       for i := 0 to slSV.Count-1 do
       begin
-        CheckTerm(slSV.Strings[i], outSL, slIdNames);
+        tmpCmds := CheckTerm(slSV.Strings[i], slIdNames);
+        for j := Low(tmpCmds) to High(tmpCmds) do
+        begin
+          l := Length(result);
+          SetLength(result, l+1);
+          result[l] := tmpCmds[j];
+        end;
       end;
     finally
       slSV.Free;
@@ -573,12 +553,13 @@ begin
   end;
 end;
 
-procedure TUD2.CheckTerm(idTermAndCmd: string; commandSLout: TStrings; slIdNames: TStrings=nil);
+function TUD2.CheckTerm(idTermAndCmd: string; slIdNames: TStrings=nil): TUD2CommandArray;
 var
-  nameVal: TArrayOfString;
-  idTerm, cmd: string;
   slIdNamesCreated: boolean;
+  ent: TUD2TDFEntry;
 begin
+  SetLength(result, 0);
+
   slIdNamesCreated := false;
   try
     if not Assigned(slIdNames) then
@@ -588,18 +569,11 @@ begin
       GetAllDetectedIDs(slIdNames);
     end;
 
-    SetLength(nameVal, 0);
-
-    // We are doing the interpretation of the line ourselves, because
-    // TStringList.Values[] would not allow multiple command lines with the
-    // same key (idTerm)
-    // TODO xxx: big problem when we want to check environment variables, since our idTerm would contain '=' !
-    nameVal := SplitString('=', idTermAndCmd);
-    if Length(nameVal) < 2 then exit;
-    idTerm := nameVal[0];
-    cmd    := nameVal[1];
-
-    if FulfilsEverySubterm(idTerm, slIdNames) then commandSLout.Add(cmd);
+    if not UD2P_ParseTdfLine(idTermAndCmd, ent) then Exit;
+    if FulfilsEverySubterm(ent.ids, slIdNames) then
+    begin
+      result := ent.commands;
+    end;
   finally
     if slIdNamesCreated then slIdNames.Free;
   end;

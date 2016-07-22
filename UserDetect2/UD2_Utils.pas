@@ -9,7 +9,7 @@ interface
 {$INCLUDE 'UserDetect2.inc'}
 
 uses
-  Windows, SysUtils, Dialogs, ShellAPI, Classes;
+  Windows, SysUtils, Dialogs, ShellAPI, Classes, UD2_Parsing;
 
 const
   EXITCODE_OK = 0;
@@ -28,16 +28,11 @@ type
     IconIndex: integer;
   end;
 
-const
-  // Prefixes for UD2_RunCmd()
-  UD2_RUN_IN_OWN_DIRECTORY_PREFIX = '$RIOD$';
-  UD2_RUN_AS_ADMIN                = '$ADMIN$';
-
 function SplitString(const aSeparator, aString: string; aMax: Integer = 0): TArrayOfString;
 function BetterInterpreteBool(str: string): boolean;
 function GetOwnCmdName: string;
 function ExpandEnvStr(const szInput: string): string;
-procedure UD2_RunCMD(cmdLine: string; WindowMode: integer=SW_NORMAL);
+procedure UD2_RunCMD(cmd: TUD2Command);
 function SplitIconString(IconString: string): TIconFileIdx;
 // function GetHTML(AUrl: string): string;
 procedure VTS_CheckUpdates(VTSID, CurVer: string);
@@ -198,7 +193,7 @@ begin
   end;
 end;
 
-procedure UD2_RunCMD(cmdLine: string; WindowMode: integer=SW_NORMAL);
+procedure UD2_RunCMD(cmd: TUD2Command);
 // Discussion: http://stackoverflow.com/questions/32802679/acceptable-replacement-for-winexec/32804669#32804669
 // Version 1: http://pastebin.com/xQjDmyVe
 // --> CreateProcess + ShellExecuteEx
@@ -217,6 +212,7 @@ var
   cmdFile, cmdArgs, cmdDir: string;
   p: integer;
   sei: TShellExecuteInfo;
+  cmdLine: string;
 begin
   // We need a function which does following:
   // 1. Replace the Environment strings, e.g. %SystemRoot%
@@ -226,7 +222,7 @@ begin
   // 5. Runs non-EXE files (e.g. "Letter.doc")
   // 6. Commands with white spaces (e.g. "C:\Program Files\xyz.exe") must be enclosed in quotes.
 
-  cmdLine := ExpandEnvStr(cmdLine);
+  cmdLine := ExpandEnvStr(cmd.executable);
 
   // Split command line from argument list
   if Copy(cmdLine, 1, 1) = '"' then
@@ -262,17 +258,13 @@ begin
 
   ZeroMemory(@sei, SizeOf(sei));
 
-  if Pos(UD2_RUN_AS_ADMIN, cmdLine) >= 1 then
+  if cmd.runAsAdmin then
   begin
-    cmdLine := StringReplace(cmdLine, UD2_RUN_AS_ADMIN, '', [rfReplaceAll]);
-
     sei.lpVerb := 'runas';
   end;
 
-  if Pos(UD2_RUN_IN_OWN_DIRECTORY_PREFIX, cmdLine) >= 1 then
+  if cmd.runInOwnDirectory then
   begin
-    cmdLine := StringReplace(cmdLine, UD2_RUN_IN_OWN_DIRECTORY_PREFIX, '', [rfReplaceAll]);
-
     cmdFile := ExtractFileName(cmdLine);
     cmdDir  := ExtractFilePath(cmdLine);
   end
@@ -289,7 +281,7 @@ begin
   {$ENDIF}
   if cmdArgs <> '' then sei.lpParameters := PChar(cmdArgs);
   if cmdDir  <> '' then sei.lpDirectory  := PChar(cmdDir);
-  sei.nShow        := WindowMode;
+  sei.nShow        := cmd.windowMode;
   if ShellExecuteEx(@sei) then Exit;
   {$IFNDEF PREFER_SHELLEXECUTEEX_MESSAGES}
   if not CheckLastOSCall(false) then ExitCode := EXITCODE_RUN_FAILURE;
@@ -474,16 +466,18 @@ begin
 end;
 
 function IndexOf_CS(aStrings: TStrings; aToken: String): Integer;
-// Source: http://www.delphipraxis.net/888928-post15.html
 var
-  i : Integer;
+  i: Integer;
 begin
   Result := -1;
-  for i := 0 to aStrings.Count do
-    if aStrings[i]=aToken then begin
+  for i := 0 to aStrings.Count-1 do
+  begin
+    if aStrings[i] = aToken then
+    begin
       Result := i;
       Break;
     end;
+  end;
 end;
 
 end.
