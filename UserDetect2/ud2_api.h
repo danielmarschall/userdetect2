@@ -24,6 +24,14 @@ UD2_API UD2_STATUS IdentificationMethodNameW(LPWSTR lpIdentificationMethodName, 
 UD2_API UD2_STATUS IdentificationStringW(LPWSTR lpIdentifier, DWORD cchSize);
 UD2_API BOOL DescribeOwnStatusCodeW(LPWSTR lpErrorDescription, DWORD cchSize, UD2_STATUS statusCode, LANGID wLangID);
 
+#ifdef UD2_DYNAMIC_PLUGIN
+// Extension of the plugin API starting with version v2.2.
+// We don't assign a new PluginIdentifier GUID since the methods of the old API
+// are still valid, so an UserDetect2 v2.0/v2.1 plugin can be still used with UserDetect2 v2.2.
+// Therefore, this function *MUST* be optional and therefore it may only be imported dynamically.
+UD2_API UD2_STATUS DynamicIdentificationStringW(LPWSTR lpIdentifier, DWORD cchSize, LPWSTR lpDynamicData);
+#endif
+
 const GUID GUID_USERDETECT2_IDPLUGIN_V1 = __GUID("{6C26245E-F79A-416C-8C73-BEA3EC18BB6E}");
 #ifdef BUILDING_DLL
 UD2_API GUID PluginInterfaceID() {

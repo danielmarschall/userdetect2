@@ -40,9 +40,9 @@ type
   TFuncIdentificationStringW = function(lpIdentifier: LPWSTR; cchSize: DWORD): UD2_STATUS; cdecl;
   TFuncDescribeOwnStatusCodeW = function(lpErrorDescription: LPWSTR; cchSize: DWORD; statusCode: UD2_STATUS; wLangID: LANGID): BOOL; cdecl;
 
-  // Extension of the plugin API starting with version 3.
+  // Extension of the plugin API starting with version v2.2.
   // We don't assign a new PluginIdentifier GUID since the methods of the old API
-  // are still valid, so an UserDetect2 2.x plugin can be still used with UserDetect2 3.x.
+  // are still valid, so an UserDetect2 v2.0/v2.1 plugin can be still used with UserDetect2 v2.2.
   // Therefore, this function *MUST* be optional and therefore it may only be imported dynamically.
   TFuncDynamicIdentificationStringW = function(lpIdentifier: LPWSTR; cchSize: DWORD; lpDynamicData: LPWSTR): UD2_STATUS; cdecl;
 

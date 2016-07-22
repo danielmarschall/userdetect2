@@ -184,7 +184,12 @@ var
   iconIndex: integer;
   obj: TUD2ListViewEntry;
 begin
+  for i := 0 to TasksListView.Items.Count-1 do
+  begin
+    TUD2ListViewEntry(TasksListView.Items.Item[i].Data).Free;
+  end;
   TasksListView.Clear;
+
   sl := TStringList.Create;
   try
     ud2.GetTaskListing(sl);
@@ -248,11 +253,13 @@ procedure TUD2MainForm.FormDestroy(Sender: TObject);
 var
   i: integer;
 begin
-  if Assigned(ud2) then ud2.Free;
+  if Assigned(ud2) then FreeAndNil(ud2);
+
   for i := 0 to TasksListView.Items.Count-1 do
   begin
     TUD2ListViewEntry(TasksListView.Items.Item[i].Data).Free;
   end;
+  TasksListView.Clear;
 end;
 
 procedure TUD2MainForm.CheckForErrors;
@@ -622,6 +629,7 @@ var
   i: integer;
   p: TUD2Plugin;
 begin
+  DynamicTestPluginComboBox.Clear;
   for i := 0 to ud2.LoadedPlugins.Count-1 do
   begin
     p := ud2.LoadedPlugins.Items[i] as TUD2Plugin;
