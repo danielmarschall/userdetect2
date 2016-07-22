@@ -21,13 +21,15 @@ type
   public
     // This flag will be set if "AutoOSNotSupportedCompatibility" of the INI manifest had to be enforced/used
     OSNotSupportedEnforced: boolean;
-    
+
+    // TODO: this stuff should be read-only...    
     PluginDLL: string;
     PluginGUID: TGUID;
     PluginName: WideString;
     PluginVendor: WideString;
     PluginVersion: WideString;
     IdentificationMethodName: WideString;
+    AcceptsDynamicRequests: boolean;
 
     // ONLY contains the non-failure status code of IdentificationStringW
     IdentificationProcedureStatusCode: UD2_STATUS;
@@ -40,7 +42,8 @@ type
     constructor Create;
     function AddIdentification(IdStr: WideString): TUD2IdentificationEntry;
 
-    function InvokeDynamicCheck(dynamicData: string): boolean;
+    function InvokeDynamicCheck(dynamicData: string; var outIDs: TArrayOfString): boolean; overload;
+    function InvokeDynamicCheck(dynamicData: string): boolean; overload;
     function GetDynamicRequestResult(dynamicData: string): TArrayOfString;
 
     function EqualsMethodNameOrGuid(idMethodNameOrGUID: string): boolean;
@@ -192,31 +195,36 @@ begin
   FDetectedIdentifications := TObjectList{<TUD2IdentificationEntry>}.Create(true);
 end;
 
-function TUD2Plugin.InvokeDynamicCheck(dynamicData: string): boolean;
+function TUD2Plugin.InvokeDynamicCheck(dynamicData: string; var outIDs: TArrayOfString): boolean;
 var
   ude: TUD2IdentificationEntry;
   i: integer;
-  ids: TArrayOfString;
   id: string;
+  l: integer;
 begin
   result := false;
+
+  SetLength(outIDs, 0);
 
   for i := 0 to FDetectedIdentifications.Count-1 do
   begin
     ude := FDetectedIdentifications.Items[i] as TUD2IdentificationEntry;
     if ude.dynamicDataUsed and (ude.dynamicData = dynamicData) then
     begin
-      // The dynamic content was already evaluated (and therefore is already added in FDetectedIdentifications).
-      Exit;
+      l := Length(outIDs);
+      SetLength(outIDs, l+1);
+      outIDs[l] := ude.FIdentificationString;
     end;
   end;
 
-  SetLength(ids, 0);
-  ids := GetDynamicRequestResult(dynamicData);
+  // The dynamic content was already evaluated (and therefore is already added in FDetectedIdentifications).
+  if Length(outIDs) > 0 then exit;
 
-  for i := 0 to Length(ids)-1 do
+  outIDs := GetDynamicRequestResult(dynamicData);
+
+  for i := 0 to Length(outIDs)-1 do
   begin
-    id := ids[i];
+    id := outIDs[i];
 
     ude := AddIdentification(id);
     ude.dynamicDataUsed := true;
@@ -246,6 +254,13 @@ function TUD2Plugin.EqualsMethodNameOrGuid(idMethodNameOrGUID: string): boolean;
 begin
   result := SameText(IdentificationMethodName, idMethodNameOrGUID) or
             SameText(GUIDToString(PluginGUID), idMethodNameOrGUID)
+end;
+
+function TUD2Plugin.InvokeDynamicCheck(dynamicData: string): boolean;
+var
+  dummy: TArrayOfString;
+begin
+  result := InvokeDynamicCheck(dynamicData, dummy)
 end;
 
 { TUD2IdentificationEntry }
@@ -747,12 +762,16 @@ begin
           Exit;
         end;
 
-        fDynamicIdentificationStringW := nil;
+        pl := TUD2Plugin.Create;
+        pl.PluginDLL := dllFile;
+
+        @fDynamicIdentificationStringW := GetProcAddress(dllHandle, mnDynamicIdentificationStringW);
+        pl.AcceptsDynamicRequests := Assigned(fDynamicIdentificationStringW);
+
         fIdentificationStringW := nil;
         if useDynamicData then
         begin
-          @fDynamicIdentificationStringW := GetProcAddress(dllHandle, mnDynamicIdentificationStringW);
-          if not Assigned(fDynamicIdentificationStringW) then
+          if not pl.AcceptsDynamicRequests then
           begin
             // TODO xxx: Darf hier ein fataler Fehler entstehen, obwohl dieses Szenario nur durch die INI file auftreten kann?
             // TODO (allgemein): In der Modulübersicht soll auch gezeigt werden, ob dieses Modul dynamischen Content erlaubt.
@@ -812,9 +831,6 @@ begin
           Errors.Add(Format(LNG_METHOD_NOT_FOUND, [mnDescribeOwnStatusCodeW, dllFile]));
           Exit;
         end;
-
-        pl := TUD2Plugin.Create;
-        pl.PluginDLL := dllFile;
 
         if not _ApplyCompatibilityGUID then
         begin

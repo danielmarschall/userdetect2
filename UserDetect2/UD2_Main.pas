@@ -49,8 +49,8 @@ type
     ErrorsMemo: TMemo;
     Memo1: TMemo;
     Panel1: TPanel;
-    Button1: TButton;
-    Button2: TButton;
+    OpenTDFButton: TButton;
+    SaveTDFButton: TButton;
     TasksPopupMenu: TPopupMenu;
     Run1: TMenuItem;
     Properties1: TMenuItem;
@@ -62,12 +62,17 @@ type
     MenuItem1: TMenuItem;
     Panel2: TPanel;
     Image2: TImage;
-    Button5: TButton;
+    DynamicTestGroupbox: TGroupBox;
+    DynamicTestPluginComboBox: TComboBox;
+    DynamicTestPluginLabel: TLabel;
+    DynamicTestDataLabel: TLabel;
+    DynamicTestDataEdit: TEdit;
+    DynamicTestButton: TButton;
     procedure FormDestroy(Sender: TObject);
     procedure TasksListViewDblClick(Sender: TObject);
     procedure TasksListViewKeyPress(Sender: TObject; var Key: Char);
-    procedure Button1Click(Sender: TObject);
-    procedure Button2Click(Sender: TObject);
+    procedure OpenTDFButtonClick(Sender: TObject);
+    procedure SaveTDFButtonClick(Sender: TObject);
     procedure URLLabelClick(Sender: TObject);
     procedure TasksPopupMenuPopup(Sender: TObject);
     procedure Run1Click(Sender: TObject);
@@ -79,13 +84,14 @@ type
     procedure LoadedPluginsPopupMenuPopup(Sender: TObject);
     procedure MenuItem1Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
-    procedure Button5Click(Sender: TObject);
+    procedure DynamicTestButtonClick(Sender: TObject);
   protected
     ud2: TUD2;
     procedure LoadTaskList;
     procedure LoadDetectedIDs;
     procedure LoadINITemplate;
     procedure LoadLoadedPluginList;
+    procedure LoadDynamicPluginList;
     function GetIniFileName: string;
     procedure DoRun(ShortTaskName: string);
     procedure CheckForErrors;
@@ -349,8 +355,12 @@ begin
       SubItems.Add(pl.PluginName);
       SubItems.Add(pl.PluginVersion);
       SubItems.Add(pl.IdentificationMethodName);
+      if pl.AcceptsDynamicRequests then
+        SubItems.Add('Yes')
+      else
+        SubItems.Add('No');
       SubItems.Add(IntToStr(pl.DetectedIdentifications.Count));
-      SubItems.Add(Format(LNG_MS, [Max(1,pl.time)])); // at least show 1ms, otherwise it would be unloggical
+      SubItems.Add(Format(LNG_MS, [Max(1,pl.time)])); // at least show 1ms, otherwise it would look unloggical
       SubItems.Add(pl.IdentificationProcedureStatusCodeDescribed);
       SubItems.Add(pl.PluginGUIDString);
     end;
@@ -380,7 +390,7 @@ begin
   end;
 end;
 
-procedure TUD2MainForm.Button1Click(Sender: TObject);
+procedure TUD2MainForm.OpenTDFButtonClick(Sender: TObject);
 var
   cmd: TUD2Command;
 begin
@@ -391,7 +401,7 @@ begin
   UD2_RunCMD(cmd);
 end;
 
-procedure TUD2MainForm.Button2Click(Sender: TObject);
+procedure TUD2MainForm.SaveTDFButtonClick(Sender: TObject);
 begin
   if CompatSaveDialogExecute(SaveDialog1) then
   begin
@@ -561,6 +571,7 @@ begin
     LoadDetectedIDs;
     LoadINITemplate;
     LoadLoadedPluginList;
+    LoadDynamicPluginList;
     CheckForErrors;
 
     Visible := true;
@@ -574,32 +585,46 @@ begin
   PageControl1.ActivePage := TasksTabSheet;
 end;
 
-procedure TUD2MainForm.Button5Click(Sender: TObject);
+procedure TUD2MainForm.DynamicTestButtonClick(Sender: TObject);
 var
-  idTerm: string;
-  cmds: TUD2CommandArray;
-  sCmds: string;
-  i: integer;
+  p: TUD2Plugin;
+  x: TArrayOfString;
+  newStuff: boolean;
+resourcestring
+  LNG_DETECTED_DYNAMICS = 'The plugin returns following identification strings:';
 begin
-  // TODO xxx: Auch eine Möglichkeit geben, einfach nur "Testecho(abc)" einzugeben und es kommt was bei raus
-
-  if InputQuery('Enter example term', 'Example: Testecho(abc):abc=calc.exe', idTerm) then
+  if DynamicTestPluginComboBox.ItemIndex = -1 then
   begin
-    SetLength(cmds, 0);
-    cmds := ud2.CheckTerm(idTerm);
-
-    sCmds := '';
-    for i := Low(cmds) to High(cmds) do
-    begin
-      sCmds := sCmds + cmds[i].executable + #13#10;
-    end;
-
-    if Length(cmds) = 0 then
-      ShowMessage('No commands would be executed.')
-    else
-      showmessage('Following commands would be executed:' + #13#10#13#10 + sCmds);
+    ShowMessage('Please select a plugin that is accepting dynamic requests.');
+    exit;
   end;
-  LoadDetectedIDs;
+
+  p := DynamicTestPluginComboBox.Items.Objects[DynamicTestPluginComboBox.ItemIndex] as TUD2Plugin;
+
+  newStuff := p.InvokeDynamicCheck(DynamicTestDataEdit.Text, x);
+  
+  showmessage(LNG_DETECTED_DYNAMICS + #13#10#13#10 + MergeString(x, #13#10));
+
+  if newStuff then
+  begin
+    LoadDetectedIDs;
+    LoadINITemplate;
+  end;
+end;
+
+procedure TUD2MainForm.LoadDynamicPluginList;
+var
+  i: integer;
+  p: TUD2Plugin;
+begin
+  for i := 0 to ud2.LoadedPlugins.Count-1 do
+  begin
+    p := ud2.LoadedPlugins.Items[i] as TUD2Plugin;
+    if p.AcceptsDynamicRequests then
+    begin
+      DynamicTestPluginComboBox.Items.AddObject(p.PluginName, p);
+    end;
+  end;
 end;
 
 end.

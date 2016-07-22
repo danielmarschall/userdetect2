@@ -1,9 +1,9 @@
 object UD2MainForm: TUD2MainForm
-  Left = 190
-  Top = 177
-  Width = 784
-  Height = 440
-  ActiveControl = IdentificationsListView
+  Left = 202
+  Top = 139
+  Width = 897
+  Height = 519
+  ActiveControl = IniTemplateMemo
   Caption = 'ViaThinkSoft UserDetect2'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -20,9 +20,9 @@ object UD2MainForm: TUD2MainForm
   object PageControl1: TPageControl
     Left = 0
     Top = 0
-    Width = 768
-    Height = 402
-    ActivePage = TabSheet2
+    Width = 881
+    Height = 481
+    ActivePage = TabSheet3
     Align = alClient
     TabOrder = 0
     object TasksTabSheet: TTabSheet
@@ -30,8 +30,8 @@ object UD2MainForm: TUD2MainForm
       object TasksListView: TVTSListView
         Left = 0
         Top = 0
-        Width = 760
-        Height = 374
+        Width = 873
+        Height = 453
         Align = alClient
         Columns = <>
         Items.Data = {
@@ -49,14 +49,11 @@ object UD2MainForm: TUD2MainForm
     object TabSheet2: TTabSheet
       Caption = 'Identifications'
       ImageIndex = 1
-      DesignSize = (
-        760
-        374)
       object IdentificationsListView: TVTSListView
         Left = 0
         Top = 0
-        Width = 760
-        Height = 374
+        Width = 873
+        Height = 376
         Align = alClient
         Columns = <
           item
@@ -77,6 +74,7 @@ object UD2MainForm: TUD2MainForm
           item
             Caption = 'GUID of Plugin'
           end>
+        HideSelection = False
         ReadOnly = True
         RowSelect = True
         PopupMenu = IdentificationsPopupMenu
@@ -84,15 +82,58 @@ object UD2MainForm: TUD2MainForm
         ViewStyle = vsReport
         OnCompare = ListViewCompare
       end
-      object Button5: TButton
-        Left = 616
-        Top = 320
-        Width = 129
-        Height = 41
-        Anchors = [akRight, akBottom]
-        Caption = 'Test dynamic'
+      object DynamicTestGroupbox: TGroupBox
+        Left = 0
+        Top = 376
+        Width = 873
+        Height = 77
+        Align = alBottom
+        Caption = 'Check Dynamic Query'
         TabOrder = 1
-        OnClick = Button5Click
+        DesignSize = (
+          873
+          77)
+        object DynamicTestPluginLabel: TLabel
+          Left = 16
+          Top = 24
+          Width = 29
+          Height = 13
+          Caption = 'Plugin'
+        end
+        object DynamicTestDataLabel: TLabel
+          Left = 272
+          Top = 24
+          Width = 67
+          Height = 13
+          Caption = 'Dynamic Data'
+        end
+        object DynamicTestPluginComboBox: TComboBox
+          Left = 16
+          Top = 40
+          Width = 225
+          Height = 21
+          Style = csDropDownList
+          ItemHeight = 13
+          TabOrder = 0
+        end
+        object DynamicTestDataEdit: TEdit
+          Left = 272
+          Top = 40
+          Width = 441
+          Height = 21
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 1
+        end
+        object DynamicTestButton: TButton
+          Left = 736
+          Top = 32
+          Width = 121
+          Height = 33
+          Anchors = [akTop, akRight]
+          Caption = 'Query'
+          TabOrder = 2
+          OnClick = DynamicTestButtonClick
+        end
       end
     end
     object TabSheet3: TTabSheet
@@ -101,14 +142,15 @@ object UD2MainForm: TUD2MainForm
       object IniTemplateMemo: TMemo
         Left = 0
         Top = 0
-        Width = 760
-        Height = 323
+        Width = 873
+        Height = 402
         Align = alClient
         Font.Charset = ANSI_CHARSET
         Font.Color = clWindowText
         Font.Height = -12
         Font.Name = 'Courier New'
         Font.Style = []
+        HideSelection = False
         ParentFont = False
         ReadOnly = True
         ScrollBars = ssBoth
@@ -117,16 +159,16 @@ object UD2MainForm: TUD2MainForm
       end
       object Panel1: TPanel
         Left = 0
-        Top = 323
-        Width = 760
+        Top = 402
+        Width = 873
         Height = 51
         Align = alBottom
         BevelOuter = bvNone
         TabOrder = 1
         DesignSize = (
-          760
+          873
           51)
-        object Button1: TButton
+        object OpenTDFButton: TButton
           Left = 8
           Top = 8
           Width = 209
@@ -134,17 +176,17 @@ object UD2MainForm: TUD2MainForm
           Anchors = [akLeft, akTop, akBottom]
           Caption = 'Open current Task Definition File'
           TabOrder = 0
-          OnClick = Button1Click
+          OnClick = OpenTDFButtonClick
         end
-        object Button2: TButton
-          Left = 541
+        object SaveTDFButton: TButton
+          Left = 654
           Top = 8
           Width = 209
           Height = 33
           Anchors = [akTop, akRight, akBottom]
           Caption = 'Save as new Task Definition File'
           TabOrder = 1
-          OnClick = Button2Click
+          OnClick = SaveTDFButtonClick
         end
       end
     end
@@ -154,8 +196,8 @@ object UD2MainForm: TUD2MainForm
       object LoadedPluginsListView: TVTSListView
         Left = 0
         Top = 0
-        Width = 760
-        Height = 374
+        Width = 873
+        Height = 453
         Align = alClient
         Columns = <
           item
@@ -179,6 +221,9 @@ object UD2MainForm: TUD2MainForm
             Width = 100
           end
           item
+            Caption = 'Dynamic?'
+          end
+          item
             Caption = 'Detected IDs'
           end
           item
@@ -191,6 +236,7 @@ object UD2MainForm: TUD2MainForm
             Caption = 'GUID of Plugin'
             Width = 100
           end>
+        HideSelection = False
         ReadOnly = True
         RowSelect = True
         PopupMenu = LoadedPluginsPopupMenu
@@ -203,8 +249,8 @@ object UD2MainForm: TUD2MainForm
       Caption = 'About'
       ImageIndex = 4
       DesignSize = (
-        760
-        374)
+        873
+        453)
       object Image1: TImage
         Left = 8
         Top = 8
@@ -624,9 +670,10 @@ object UD2MainForm: TUD2MainForm
       object Memo1: TMemo
         Left = 264
         Top = 8
-        Width = 482
-        Height = 356
+        Width = 595
+        Height = 435
         Anchors = [akLeft, akTop, akRight, akBottom]
+        HideSelection = False
         Lines.Strings = (
           '                    GNU GENERAL PUBLIC LICENSE'
           '                       Version 3, 29 June 2007'
@@ -2103,9 +2150,10 @@ object UD2MainForm: TUD2MainForm
       object ErrorsMemo: TMemo
         Left = 49
         Top = 0
-        Width = 711
-        Height = 374
+        Width = 824
+        Height = 453
         Align = alClient
+        HideSelection = False
         Lines.Strings = (
           '')
         ReadOnly = True
@@ -2116,7 +2164,7 @@ object UD2MainForm: TUD2MainForm
         Left = 0
         Top = 0
         Width = 49
-        Height = 374
+        Height = 453
         Align = alLeft
         BevelOuter = bvNone
         TabOrder = 1

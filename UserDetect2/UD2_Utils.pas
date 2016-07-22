@@ -29,6 +29,7 @@ type
   end;
 
 function SplitString(const aSeparator, aString: string; aMax: Integer = 0): TArrayOfString;
+function MergeString(ary: TArrayOfString; glue: string): string;
 function BetterInterpreteBool(str: string): boolean;
 function GetOwnCmdName: string;
 function ExpandEnvStr(const szInput: string): string;
@@ -477,6 +478,18 @@ begin
       Result := i;
       Break;
     end;
+  end;
+end;
+
+function MergeString(ary: TArrayOfString; glue: string): string;
+var
+  i: integer;
+begin
+  result := '';
+  for i := Low(ary) to High(ary) do
+  begin
+    if result <> '' then result := result + glue;
+    result := result + ary[i];
   end;
 end;
 
