@@ -5,8 +5,6 @@ interface
 uses
   Windows, SysUtils;
 
-// TODO: use this for better object oriented programming
-
 // TODO : WideStrings  idName: WideString;   ???
 
 const

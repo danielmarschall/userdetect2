@@ -39,7 +39,7 @@ function SplitIconString(IconString: string): TIconFileIdx;
 procedure VTS_CheckUpdates(VTSID, CurVer: string);
 function FormatOSError(ec: DWORD): string;
 function CheckBoolParam(idx: integer; name: string): boolean;
-function IndexOf_CS(aStrings: TStrings; aToken: String): Integer;
+function IndexOf_CS(aStrings: TStrings; aToken: string): Integer;
 function UD2_GetThreadErrorMode: DWORD;
 function UD2_SetThreadErrorMode(dwNewMode: DWORD; lpOldMode: LPDWORD): BOOL;
 

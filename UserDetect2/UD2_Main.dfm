@@ -3,7 +3,7 @@ object UD2MainForm: TUD2MainForm
   Top = 139
   Width = 897
   Height = 519
-  ActiveControl = IniTemplateMemo
+  ActiveControl = IdentificationsListView
   Caption = 'ViaThinkSoft UserDetect2'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -22,7 +22,7 @@ object UD2MainForm: TUD2MainForm
     Top = 0
     Width = 881
     Height = 481
-    ActivePage = TabSheet3
+    ActivePage = TabSheet2
     Align = alClient
     TabOrder = 0
     object TasksTabSheet: TTabSheet
@@ -88,7 +88,7 @@ object UD2MainForm: TUD2MainForm
         Width = 873
         Height = 77
         Align = alBottom
-        Caption = 'Check Dynamic Query'
+        Caption = 'Invoke Dynamic Check'
         TabOrder = 1
         DesignSize = (
           873

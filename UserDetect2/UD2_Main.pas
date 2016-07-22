@@ -287,7 +287,7 @@ begin
           SubItems.Add('');
         SubItems.Add(pl.IdentificationMethodName);
         SubItems.Add(ude.IdentificationString);
-        SubItems.Add(GUIDToString(pl.PluginGUID));
+        SubItems.Add(pl.PluginGUIDString)
       end;
     end;
   end;
@@ -360,7 +360,7 @@ begin
       else
         SubItems.Add('No');
       SubItems.Add(IntToStr(pl.DetectedIdentifications.Count));
-      SubItems.Add(Format(LNG_MS, [Max(1,pl.time)])); // at least show 1ms, otherwise it would look unloggical
+      SubItems.Add(Format(LNG_MS, [Max(1,pl.LoadingTime)])); // at least show 1ms, otherwise it would look unloggical
       SubItems.Add(pl.IdentificationProcedureStatusCodeDescribed);
       SubItems.Add(pl.PluginGUIDString);
     end;
@@ -592,6 +592,7 @@ var
   newStuff: boolean;
 resourcestring
   LNG_DETECTED_DYNAMICS = 'The plugin returns following identification strings:';
+  LNG_NOTHING_DETECTED = 'The plugin did not send any identification strings.';
 begin
   if DynamicTestPluginComboBox.ItemIndex = -1 then
   begin
@@ -602,13 +603,17 @@ begin
   p := DynamicTestPluginComboBox.Items.Objects[DynamicTestPluginComboBox.ItemIndex] as TUD2Plugin;
 
   newStuff := p.InvokeDynamicCheck(DynamicTestDataEdit.Text, x);
-  
-  showmessage(LNG_DETECTED_DYNAMICS + #13#10#13#10 + MergeString(x, #13#10));
+
+  if Length(x) > 0 then
+    ShowMessage(LNG_DETECTED_DYNAMICS + #13#10#13#10 + MergeString(x, #13#10))
+  else
+    ShowMessage(LNG_NOTHING_DETECTED);
 
   if newStuff then
   begin
     LoadDetectedIDs;
     LoadINITemplate;
+    LoadLoadedPluginList; // To update the "Detected IDs" column
   end;
 end;
 

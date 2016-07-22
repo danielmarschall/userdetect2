@@ -18,33 +18,48 @@ type
   TUD2Plugin = class(TObject)
   protected
     FDetectedIdentifications: TObjectList{<TUD2IdentificationEntry>};
+    FOSNotSupportedEnforced: boolean;
+    FPluginDLL: string;
+    FPluginGUIDSet: boolean;
+    FPluginGUID: TGUID;
+    FPluginName: WideString;
+    FPluginVendor: WideString;
+    FPluginVersion: WideString;
+    FIdentificationMethodName: WideString;
+    FAcceptsDynamicRequests: boolean;
+    FIdentificationProcedureStatusCode: UD2_STATUS;
+    FIdentificationProcedureStatusCodeDescribed: WideString;
+    FLoadingTime: Cardinal;
   public
     // This flag will be set if "AutoOSNotSupportedCompatibility" of the INI manifest had to be enforced/used
-    OSNotSupportedEnforced: boolean;
+    property OSNotSupportedEnforced: boolean read FOSNotSupportedEnforced;
 
-    // TODO: this stuff should be read-only...    
-    PluginDLL: string;
-    PluginGUID: TGUID;
-    PluginName: WideString;
-    PluginVendor: WideString;
-    PluginVersion: WideString;
-    IdentificationMethodName: WideString;
-    AcceptsDynamicRequests: boolean;
+    // Data read from the DLL
+    property PluginDLL: string read FPluginDLL;
+    property PluginGUIDSet: boolean read FPluginGUIDSet;
+    property PluginGUID: TGUID read FPluginGUID;
+    property PluginName: WideString read FPluginName;
+    property PluginVendor: WideString read FPluginVendor;
+    property PluginVersion: WideString read FPluginVersion;
+    property IdentificationMethodName: WideString read FIdentificationMethodName;
+    property AcceptsDynamicRequests: boolean read FAcceptsDynamicRequests;
 
     // ONLY contains the non-failure status code of IdentificationStringW
-    IdentificationProcedureStatusCode: UD2_STATUS;
-    IdentificationProcedureStatusCodeDescribed: WideString;
+    property IdentificationProcedureStatusCode: UD2_STATUS read FIdentificationProcedureStatusCode;
+    property IdentificationProcedureStatusCodeDescribed: WideString read FIdentificationProcedureStatusCodeDescribed;
 
-    Time: Cardinal;
+    // How long did the plugin to load?
+    property LoadingTime: Cardinal read FLoadingTime;
+
     function PluginGUIDString: string;
     property DetectedIdentifications: TObjectList{<TUD2IdentificationEntry>} read FDetectedIdentifications;
     destructor Destroy; override;
     constructor Create;
     function AddIdentification(IdStr: WideString): TUD2IdentificationEntry;
 
-    function InvokeDynamicCheck(dynamicData: string; var outIDs: TArrayOfString): boolean; overload;
-    function InvokeDynamicCheck(dynamicData: string): boolean; overload;
-    function GetDynamicRequestResult(dynamicData: string): TArrayOfString;
+    function InvokeDynamicCheck(dynamicData: WideString; var outIDs: TArrayOfString): boolean; overload;
+    function InvokeDynamicCheck(dynamicData: WideString): boolean; overload;
+    function GetDynamicRequestResult(dynamicData: WideString): TArrayOfString;
 
     function EqualsMethodNameOrGuid(idMethodNameOrGUID: string): boolean;
   end;
@@ -54,10 +69,10 @@ type
     FIdentificationString: WideString;
     FPlugin: TUD2Plugin;
     FDynamicDataUsed: boolean;
-    FDynamicData: string;
+    FDynamicData: WideString;
   public
     property DynamicDataUsed: boolean read FDynamicDataUsed write FDynamicDataUsed;
-    property DynamicData: string read FDynamicData write FDynamicData;
+    property DynamicData: WideString read FDynamicData write FDynamicData;
     property IdentificationString: WideString read FIdentificationString;
     property Plugin: TUD2Plugin read FPlugin;
     procedure GetIdNames(sl: TStrings);
@@ -114,7 +129,7 @@ type
     procedure Execute; override;
     function HandleDLL: boolean;
   public
-    pl: TUD2Plugin; // TODO: why do we need it?! can it be leaked if we use it for dynamic requests?
+    pl: TUD2Plugin;
     Errors: TStringList;
     ResultIdentifiers: TArrayOfString;
     constructor Create(Suspended: boolean; DLL: string; alngid: LANGID; useDynamicData: boolean; dynamicData: WideString);
@@ -174,7 +189,10 @@ end;
 
 function TUD2Plugin.PluginGUIDString: string;
 begin
-  result := UpperCase(GUIDToString(PluginGUID));
+  if PluginGUIDSet then
+    result := UpperCase(GUIDToString(PluginGUID))
+  else
+    result := '';
 end;
 
 function TUD2Plugin.AddIdentification(IdStr: WideString): TUD2IdentificationEntry;
@@ -195,7 +213,7 @@ begin
   FDetectedIdentifications := TObjectList{<TUD2IdentificationEntry>}.Create(true);
 end;
 
-function TUD2Plugin.InvokeDynamicCheck(dynamicData: string; var outIDs: TArrayOfString): boolean;
+function TUD2Plugin.InvokeDynamicCheck(dynamicData: WideString; var outIDs: TArrayOfString): boolean;
 var
   ude: TUD2IdentificationEntry;
   i: integer;
@@ -234,7 +252,7 @@ begin
   end;
 end;
 
-function TUD2Plugin.GetDynamicRequestResult(dynamicData: string): TArrayOfString;
+function TUD2Plugin.GetDynamicRequestResult(dynamicData: WideString): TArrayOfString;
 var
   lngID: LANGID;
   pll: TUD2PluginLoader;
@@ -245,6 +263,7 @@ begin
   try
     pll.WaitFor;
     result := pll.ResultIdentifiers;
+    if Assigned(pll.pl) then FreeAndNil(pll.pl);
   finally
     pll.Free;
   end;
@@ -256,7 +275,7 @@ begin
             SameText(GUIDToString(PluginGUID), idMethodNameOrGUID)
 end;
 
-function TUD2Plugin.InvokeDynamicCheck(dynamicData: string): boolean;
+function TUD2Plugin.InvokeDynamicCheck(dynamicData: WideString): boolean;
 var
   dummy: TArrayOfString;
 begin
@@ -294,7 +313,7 @@ Var
   SR: TSearchRec;
   path: string;
   pluginLoader: TUD2PluginLoader;
-  tob: TObjectList;
+  tob: TObjectList{<TUD2PluginLoader>};
   i: integer;
   {$IFDEF CHECK_FOR_SAME_PLUGIN_GUID}
   sPluginID, prevDLL: string;
@@ -303,7 +322,7 @@ Var
 resourcestring
   LNG_PLUGINS_SAME_GUID = 'Attention: The plugin "%s" and the plugin "%s" have the same identification GUID. The latter will not be loaded.';
 begin
-  tob := TObjectList.Create;
+  tob := TObjectList{<TUD2PluginLoader>}.Create;
   try
     tob.OwnsObjects := false;
 
@@ -335,10 +354,10 @@ begin
       pluginLoader := tob.items[i] as TUD2PluginLoader;
       pluginLoader.WaitFor;
       Errors.AddStrings(pluginLoader.Errors);
-      {$IFDEF CHECK_FOR_SAME_PLUGIN_GUID}
       if Assigned(pluginLoader.pl) then
       begin
-        if not pluginLoader.pl.OSNotSupportedEnforced then
+        {$IFDEF CHECK_FOR_SAME_PLUGIN_GUID}
+        if pluginLoader.pl.PluginGUIDSet then
         begin
           sPluginID := GUIDToString(pluginLoader.pl.PluginGUID);
           prevDLL := FGUIDLookup.Values[sPluginID];
@@ -352,9 +371,15 @@ begin
             FGUIDLookup.Values[sPluginID] := pluginLoader.pl.PluginDLL;
             LoadedPlugins.Add(pluginLoader.pl);
           end;
+        end
+        else
+        begin
+          LoadedPlugins.Add(pluginLoader.pl);
         end;
+        {$ELSE}
+        LoadedPlugins.Add(pluginLoader.pl);
+        {$ENDIF}
       end;
-      {$ENDIF}
       pluginLoader.Free;
     end;
   finally
@@ -414,14 +439,12 @@ begin
   result := FIniFile.SectionExists(ShortTaskName);
 end;
 
-function TUD2.ReadMetatagString(ShortTaskName, MetatagName: string;
-  DefaultVal: string): string;
+function TUD2.ReadMetatagString(ShortTaskName, MetatagName: string; DefaultVal: string): string;
 begin
   result := IniFile.ReadString(ShortTaskName, MetatagName, DefaultVal);
 end;
 
-function TUD2.ReadMetatagBool(ShortTaskName, MetatagName: string;
-  DefaultVal: string): boolean;
+function TUD2.ReadMetatagBool(ShortTaskName, MetatagName: string; DefaultVal: string): boolean;
 begin
   // DefaultVal is a string, because we want to allow an empty string, in case the
   // user wishes an Exception in case the string is not a valid boolean string
@@ -675,7 +698,8 @@ var
         sOverrideGUID := iniConfig.ReadString('Compatibility', 'OverrideGUID', '');
         if sOverrideGUID <> '' then
         begin
-          pl.PluginGUID := StringToGUID(sOverrideGUID);
+          pl.FPluginGUIDSet := true;
+          pl.FPluginGUID := StringToGUID(sOverrideGUID);
           result := true;
         end;
       finally
@@ -705,17 +729,11 @@ var
   procedure _OverwriteStatusToOSNotSupported;
   begin
     pl := TUD2Plugin.Create;
-    pl.PluginDLL := dllFile;
+    pl.FPluginDLL := dllFile;
     statusCode := UD2_STATUS_NOTAVAIL_OS_NOT_SUPPORTED;
-    pl.IdentificationProcedureStatusCode := statusCode;
-    pl.IdentificationProcedureStatusCodeDescribed := _ErrorLookup(statusCode);
-    (*
-    if not _ApplyCompatibilityGUID then
-    begin
-      CreateGUID(pl.PluginGUID); // to avoid the "double GUID" error
-    end;
-    *)
-    pl.OSNotSupportedEnforced := true; // to avoid the "double GUID" error
+    pl.FIdentificationProcedureStatusCode := statusCode;
+    pl.FIdentificationProcedureStatusCodeDescribed := _ErrorLookup(statusCode);
+    pl.FOSNotSupportedEnforced := true;
     result := true;
   end;
 
@@ -763,10 +781,10 @@ begin
         end;
 
         pl := TUD2Plugin.Create;
-        pl.PluginDLL := dllFile;
+        pl.FPluginDLL := dllFile;
 
         @fDynamicIdentificationStringW := GetProcAddress(dllHandle, mnDynamicIdentificationStringW);
-        pl.AcceptsDynamicRequests := Assigned(fDynamicIdentificationStringW);
+        pl.FAcceptsDynamicRequests := Assigned(fDynamicIdentificationStringW);
 
         fIdentificationStringW := nil;
         if useDynamicData then
@@ -774,7 +792,6 @@ begin
           if not pl.AcceptsDynamicRequests then
           begin
             // TODO xxx: Darf hier ein fataler Fehler entstehen, obwohl dieses Szenario nur durch die INI file auftreten kann?
-            // TODO (allgemein): In der Modulübersicht soll auch gezeigt werden, ob dieses Modul dynamischen Content erlaubt.
             // TODO (allgemein): doku
             Errors.Add(Format(LNG_METHOD_NOT_FOUND, [mnDynamicIdentificationStringW, dllFile]));
             Exit;
@@ -840,7 +857,8 @@ begin
             Errors.Add(Format(LNG_METHOD_NOT_FOUND, [mnPluginIdentifier, dllFile]));
             Exit;
           end;
-          pl.PluginGUID := fPluginIdentifier();
+          pl.FPluginGUIDSet := true;
+          pl.FPluginGUID := fPluginIdentifier();
         end;
 
         statusCode := fCheckLicense(nil);
@@ -852,8 +870,8 @@ begin
 
         ZeroMemory(@buf, cchBufferSize);
         statusCode := fPluginNameW(@buf, cchBufferSize, lngID);
-             if statusCode.wCategory = UD2_STATUSCAT_SUCCESS   then pl.PluginName := PWideChar(@buf)
-        else if statusCode.wCategory = UD2_STATUSCAT_NOT_AVAIL then pl.PluginName := ''
+             if statusCode.wCategory = UD2_STATUSCAT_SUCCESS   then pl.FPluginName := PWideChar(@buf)
+        else if statusCode.wCategory = UD2_STATUSCAT_NOT_AVAIL then pl.FPluginName := ''
         else
         begin
           Errors.Add(Format(LNG_METHOD_FAILURE, [_ErrorLookup(statusCode), mnPluginNameW, dllFile]));
@@ -862,8 +880,8 @@ begin
 
         ZeroMemory(@buf, cchBufferSize);
         statusCode := fPluginVendorW(@buf, cchBufferSize, lngID);
-             if statusCode.wCategory = UD2_STATUSCAT_SUCCESS   then pl.PluginVendor := PWideChar(@buf)
-        else if statusCode.wCategory = UD2_STATUSCAT_NOT_AVAIL then pl.PluginVendor := ''
+             if statusCode.wCategory = UD2_STATUSCAT_SUCCESS   then pl.FPluginVendor := PWideChar(@buf)
+        else if statusCode.wCategory = UD2_STATUSCAT_NOT_AVAIL then pl.FPluginVendor := ''
         else
         begin
           Errors.Add(Format(LNG_METHOD_FAILURE, [_ErrorLookup(statusCode), mnPluginVendorW, dllFile]));
@@ -872,8 +890,8 @@ begin
 
         ZeroMemory(@buf, cchBufferSize);
         statusCode := fPluginVersionW(@buf, cchBufferSize, lngID);
-             if statusCode.wCategory = UD2_STATUSCAT_SUCCESS   then pl.PluginVersion := PWideChar(@buf)
-        else if statusCode.wCategory = UD2_STATUSCAT_NOT_AVAIL then pl.PluginVersion := ''
+             if statusCode.wCategory = UD2_STATUSCAT_SUCCESS   then pl.FPluginVersion := PWideChar(@buf)
+        else if statusCode.wCategory = UD2_STATUSCAT_NOT_AVAIL then pl.FPluginVersion := ''
         else
         begin
           Errors.Add(Format(LNG_METHOD_FAILURE, [_ErrorLookup(statusCode), mnPluginVersionW, dllFile]));
@@ -882,8 +900,8 @@ begin
 
         ZeroMemory(@buf, cchBufferSize);
         statusCode := fIdentificationMethodNameW(@buf, cchBufferSize);
-             if statusCode.wCategory = UD2_STATUSCAT_SUCCESS   then pl.IdentificationMethodName := PWideChar(@buf)
-        else if statusCode.wCategory = UD2_STATUSCAT_NOT_AVAIL then pl.IdentificationMethodName := ''
+             if statusCode.wCategory = UD2_STATUSCAT_SUCCESS   then pl.FIdentificationMethodName := PWideChar(@buf)
+        else if statusCode.wCategory = UD2_STATUSCAT_NOT_AVAIL then pl.FIdentificationMethodName := ''
         else
         begin
           Errors.Add(Format(LNG_METHOD_FAILURE, [_ErrorLookup(statusCode), mnIdentificationMethodNameW, dllFile]));
@@ -900,8 +918,8 @@ begin
         begin
           statusCode := fIdentificationStringW(@buf, cchBufferSize);
         end;
-        pl.IdentificationProcedureStatusCode := statusCode;
-        pl.IdentificationProcedureStatusCodeDescribed := _ErrorLookup(statusCode);
+        pl.FIdentificationProcedureStatusCode := statusCode;
+        pl.FIdentificationProcedureStatusCodeDescribed := _ErrorLookup(statusCode);
         if statusCode.wCategory = UD2_STATUSCAT_SUCCESS then
         begin
           sIdentifier := PWideChar(@buf);
@@ -949,7 +967,7 @@ begin
         endtime := GetTickCount;
         time := endtime - starttime;
         if endtime < starttime then time := High(Cardinal) - time;
-        pl.time := time;
+        pl.FLoadingTime := time;
       end;
     end;
   except

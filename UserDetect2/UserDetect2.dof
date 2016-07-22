@@ -113,7 +113,7 @@ RootDir=
 IncludeVerInfo=1
 AutoIncBuild=0
 MajorVer=2
-MinorVer=1
+MinorVer=2
 Release=0
 Build=0
 Debug=0
@@ -126,13 +126,13 @@ CodePage=1252
 [Version Info Keys]
 CompanyName=ViaThinkSoft
 FileDescription=UserDetect2
-FileVersion=2.1.0.0
+FileVersion=2.2.0.0
 InternalName=UD2
 LegalCopyright=(C) 2015-2016 ViaThinkSoft
 LegalTrademarks=
 OriginalFilename=UserDetect2.exe
 ProductName=UserDetect2
-ProductVersion=2.1.0.0
+ProductVersion=2.2.0.0
 Project leader=Daniel Marschall - www.daniel-marschall.de
 Website=www.viathinksoft.de
 [HistoryLists\hlUnitAliases]
