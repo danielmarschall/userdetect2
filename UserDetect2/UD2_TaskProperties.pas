@@ -52,7 +52,7 @@ begin
   //fud2.GetCommandList(AShortTaskName, ListBox1.Items);
 
   ListBox1.Clear;
-  cmds := fud2.GetCommandList(FShortTaskName);
+  cmds := fud2.GetCommandList(FShortTaskName); // TODO: What to do with AErrorOut (errors from dynamic queries?)
 
   for i := Low(cmds) to High(cmds) do
   begin

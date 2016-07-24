@@ -178,6 +178,7 @@ begin
   nameVal := SplitString('=', idTermAndCmd); // TODO: problem... "=" could be inside dynamicData...
   if Length(nameVal) < 2 then exit;
   idTerm := nameVal[0];
+  if Pos(':', idTerm) = 0 then Exit; // e.g. the INI entry "Description" 
   cmd    := nameVal[1];
 
   // Decode conditions

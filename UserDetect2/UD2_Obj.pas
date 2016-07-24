@@ -12,6 +12,9 @@ uses
   Windows, SysUtils, Classes, IniFiles, Contnrs, Dialogs, UD2_PluginIntf,
   UD2_PluginStatus, UD2_Utils, UD2_Parsing;
 
+const
+  UD2_TagDescription = 'Description';
+
 type
   TUD2IdentificationEntry = class;
 
@@ -57,9 +60,9 @@ type
     constructor Create;
     function AddIdentification(IdStr: WideString): TUD2IdentificationEntry;
 
-    function InvokeDynamicCheck(dynamicData: WideString; var outIDs: TArrayOfString): boolean; overload;
-    function InvokeDynamicCheck(dynamicData: WideString): boolean; overload;
-    function GetDynamicRequestResult(dynamicData: WideString): TArrayOfString;
+    function InvokeDynamicCheck(dynamicData: WideString; AErrorOut: TStrings; var outIDs: TArrayOfString): boolean; overload;
+    function InvokeDynamicCheck(dynamicData: WideString; AErrorOut: TStrings): boolean; overload;
+    function GetDynamicRequestResult(dynamicData: WideString; AErrorOut: TStrings=nil): TArrayOfString;
 
     function EqualsMethodNameOrGuid(idMethodNameOrGUID: string): boolean;
   end;
@@ -95,11 +98,11 @@ type
     property LoadedPlugins: TObjectList{<TUD2Plugin>} read FLoadedPlugins;
     property IniFile: TMemIniFile read FIniFile;
     procedure GetAllDetectedIDs(outSL: TStrings);
-    function FulfilsEverySubterm(conds: TUD2TDFConditionArray; slIdNames: TStrings=nil): boolean; overload;
-    function FulfilsEverySubterm(idTerm: WideString; slIdNames: TStrings=nil): boolean; overload;
-    function CheckTerm(idTermAndCmd: string; slIdNames: TStrings=nil): TUD2CommandArray;
+    function FulfilsEverySubterm(conds: TUD2TDFConditionArray; slIdNames: TStrings=nil; AErrorOut: TStrings=nil): boolean; overload;
+    function FulfilsEverySubterm(idTerm: WideString; slIdNames: TStrings=nil; AErrorOut: TStrings=nil): boolean; overload;
+    function CheckTerm(idTermAndCmd: string; slIdNames: TStrings=nil; AErrorOut: TStrings=nil): TUD2CommandArray;
     function FindPluginByMethodNameOrGuid(idMethodName: string): TUD2Plugin;
-    function GetCommandList(ShortTaskName: string): TUD2CommandArray;
+    function GetCommandList(ShortTaskName: string; AErrorOut: TStrings=nil): TUD2CommandArray;
     procedure HandlePluginDir(APluginDir, AFileMask: string);
     procedure GetTaskListing(outSL: TStrings);
     constructor Create(AIniFileName: string);
@@ -129,7 +132,7 @@ type
     procedure Execute; override;
     function HandleDLL: boolean;
   public
-    pl: TUD2Plugin;
+    Plugin: TUD2Plugin;
     Errors: TStringList;
     ResultIdentifiers: TArrayOfString;
     constructor Create(Suspended: boolean; DLL: string; alngid: LANGID; useDynamicData: boolean; dynamicData: WideString);
@@ -149,11 +152,12 @@ resourcestring
   LNG_STATUS_NOTAVAIL_NO_ENTITIES         = 'Not available (No entities to identify)';
   LNG_STATUS_NOTAVAIL_WINAPI_CALL_FAILURE = 'Not available (A Windows API call failed. Message: %s)';
   LNG_STATUS_NOTAVAIL_ONLY_ACCEPT_DYNAMIC = 'Not available (Arguments required)';
+  LNG_STATUS_NOTAVAIL_INVALID_INPUT       = 'Not available (Plugin received invalid input)';
   LNG_UNKNOWN_NOTAVAIL                    = 'Not available (Unknown status code %s)';
 
   LNG_STATUS_FAILURE_UNSPECIFIED          = 'Error (Unspecified)';
   LNG_STATUS_FAILURE_BUFFER_TOO_SMALL     = 'Error (The provided buffer is too small!)';
-  LNG_STATUS_FAILURE_INVALID_ARGS         = 'Error (The function received invalid arguments!)';
+  LNG_STATUS_FAILURE_INVALID_ARGS         = 'Error (An internal function received invalid arguments!)';
   LNG_STATUS_FAILURE_PLUGIN_NOT_LICENSED  = 'Error (The plugin is not licensed)';
   LNG_STATUS_FAILURE_NO_RETURNED_VALUE    = 'Error (Plugin did not return a status)';
   LNG_STATUS_FAILURE_CATCHED_EXCEPTION    = 'Error (Catched unexpected Exception)';
@@ -171,6 +175,7 @@ begin
   else if UD2_STATUS_Equal(grStatus, UD2_STATUS_NOTAVAIL_NO_ENTITIES, false)         then result := LNG_STATUS_NOTAVAIL_NO_ENTITIES
   else if UD2_STATUS_Equal(grStatus, UD2_STATUS_NOTAVAIL_WINAPI_CALL_FAILURE, false) then result := Format(LNG_STATUS_NOTAVAIL_WINAPI_CALL_FAILURE, [FormatOSError(grStatus.dwExtraInfo)])
   else if UD2_STATUS_Equal(grStatus, UD2_STATUS_NOTAVAIL_ONLY_ACCEPT_DYNAMIC, false) then result := LNG_STATUS_NOTAVAIL_ONLY_ACCEPT_DYNAMIC
+  else if UD2_STATUS_Equal(grStatus, UD2_STATUS_NOTAVAIL_INVALID_INPUT, false)       then result := LNG_STATUS_NOTAVAIL_INVALID_INPUT
 
   else if UD2_STATUS_Equal(grStatus, UD2_STATUS_FAILURE_UNSPECIFIED, false)          then result := LNG_STATUS_FAILURE_UNSPECIFIED
   else if UD2_STATUS_Equal(grStatus, UD2_STATUS_FAILURE_BUFFER_TOO_SMALL, false)     then result := LNG_STATUS_FAILURE_BUFFER_TOO_SMALL
@@ -213,7 +218,7 @@ begin
   FDetectedIdentifications := TObjectList{<TUD2IdentificationEntry>}.Create(true);
 end;
 
-function TUD2Plugin.InvokeDynamicCheck(dynamicData: WideString; var outIDs: TArrayOfString): boolean;
+function TUD2Plugin.InvokeDynamicCheck(dynamicData: WideString; AErrorOut: TStrings; var outIDs: TArrayOfString): boolean;
 var
   ude: TUD2IdentificationEntry;
   i: integer;
@@ -238,7 +243,7 @@ begin
   // The dynamic content was already evaluated (and therefore is already added in FDetectedIdentifications).
   if Length(outIDs) > 0 then exit;
 
-  outIDs := GetDynamicRequestResult(dynamicData);
+  outIDs := GetDynamicRequestResult(dynamicData, AErrorOut);
 
   for i := 0 to Length(outIDs)-1 do
   begin
@@ -252,20 +257,32 @@ begin
   end;
 end;
 
-function TUD2Plugin.GetDynamicRequestResult(dynamicData: WideString): TArrayOfString;
+function TUD2Plugin.GetDynamicRequestResult(dynamicData: WideString; AErrorOut: TStrings=nil): TArrayOfString;
 var
   lngID: LANGID;
-  pll: TUD2PluginLoader;
+  loader: TUD2PluginLoader;
 begin
   lngID := GetSystemDefaultLangID;
 
-  pll := TUD2PluginLoader.Create(false, PluginDLL, lngid, true, dynamicData);
+  loader := TUD2PluginLoader.Create(false, PluginDLL, lngid, true, dynamicData);
   try
-    pll.WaitFor;
-    result := pll.ResultIdentifiers;
-    if Assigned(pll.pl) then FreeAndNil(pll.pl);
+    loader.WaitFor;
+    result := loader.ResultIdentifiers;
+    if Assigned(AErrorOut) then
+    begin
+      AErrorOut.AddStrings(loader.Errors);
+    end;
+
+    // TODO: Use assign() instead? or allow TUD2PluginLoader to write the TPlugin object directly?
+    //       Should we even overwrite the current plugin data, or return the new plugin?
+    FIdentificationProcedureStatusCode := loader.plugin.IdentificationProcedureStatusCode;
+    FIdentificationProcedureStatusCodeDescribed := loader.plugin.IdentificationProcedureStatusCodeDescribed;
+    FOSNotSupportedEnforced := loader.plugin.OSNotSupportedEnforced;
+    FLoadingTime := loader.Plugin.LoadingTime;
+
   finally
-    pll.Free;
+    if Assigned(loader.Plugin) then FreeAndNil(loader.Plugin);
+    loader.Free;
   end;
 end;
 
@@ -275,11 +292,11 @@ begin
             SameText(GUIDToString(PluginGUID), idMethodNameOrGUID)
 end;
 
-function TUD2Plugin.InvokeDynamicCheck(dynamicData: WideString): boolean;
+function TUD2Plugin.InvokeDynamicCheck(dynamicData: WideString; AErrorOut: TStrings): boolean;
 var
   dummy: TArrayOfString;
 begin
-  result := InvokeDynamicCheck(dynamicData, dummy)
+  result := InvokeDynamicCheck(dynamicData, AErrorOut, dummy)
 end;
 
 { TUD2IdentificationEntry }
@@ -302,6 +319,13 @@ constructor TUD2IdentificationEntry.Create(AIdentificationString: WideString;
   APlugin: TUD2Plugin);
 begin
   inherited Create;
+
+  // TODO: We need to do this, because ReadSectionValues strips the names of the name-value pairs...
+  //       We should correct ReadSectionValues...
+  // Example: DriveSerial(c:):2SHSWNHA010807 X    =calc.exe
+  // ReadSectionValues will return "DriveSerial(c:):2SHSWNHA010807 X=calc.exe"
+  AIdentificationString := Trim(AIdentificationString);
+
   FIdentificationString := AIdentificationString;
   FPlugin := APlugin;
 end;
@@ -354,30 +378,30 @@ begin
       pluginLoader := tob.items[i] as TUD2PluginLoader;
       pluginLoader.WaitFor;
       Errors.AddStrings(pluginLoader.Errors);
-      if Assigned(pluginLoader.pl) then
+      if Assigned(pluginLoader.Plugin) then
       begin
         {$IFDEF CHECK_FOR_SAME_PLUGIN_GUID}
-        if pluginLoader.pl.PluginGUIDSet then
+        if pluginLoader.Plugin.PluginGUIDSet then
         begin
-          sPluginID := GUIDToString(pluginLoader.pl.PluginGUID);
+          sPluginID := GUIDToString(pluginLoader.Plugin.PluginGUID);
           prevDLL := FGUIDLookup.Values[sPluginID];
-          if (prevDLL <> '') and (prevDLL <> pluginLoader.pl.PluginDLL) then
+          if (prevDLL <> '') and (prevDLL <> pluginLoader.Plugin.PluginDLL) then
           begin
-            Errors.Add(Format(LNG_PLUGINS_SAME_GUID, [prevDLL, pluginLoader.pl.PluginDLL]));
-            pluginLoader.pl.Free;
+            Errors.Add(Format(LNG_PLUGINS_SAME_GUID, [prevDLL, pluginLoader.Plugin.PluginDLL]));
+            pluginLoader.Plugin.Free;
           end
           else
           begin
-            FGUIDLookup.Values[sPluginID] := pluginLoader.pl.PluginDLL;
-            LoadedPlugins.Add(pluginLoader.pl);
+            FGUIDLookup.Values[sPluginID] := pluginLoader.Plugin.PluginDLL;
+            LoadedPlugins.Add(pluginLoader.Plugin);
           end;
         end
         else
         begin
-          LoadedPlugins.Add(pluginLoader.pl);
+          LoadedPlugins.Add(pluginLoader.Plugin);
         end;
         {$ELSE}
-        LoadedPlugins.Add(pluginLoader.pl);
+        LoadedPlugins.Add(pluginLoader.Plugin);
         {$ENDIF}
       end;
       pluginLoader.Free;
@@ -412,7 +436,7 @@ function TUD2.GetTaskName(AShortTaskName: string): string;
 resourcestring
   LNG_NO_DESCRIPTION = '(%s)';
 begin
-  result := FIniFile.ReadString(AShortTaskName, 'Description', Format(LNG_NO_DESCRIPTION, [AShortTaskName]));
+  result := FIniFile.ReadString(AShortTaskName, UD2_TagDescription, Format(LNG_NO_DESCRIPTION, [AShortTaskName]));
 end;
 
 procedure TUD2.GetTaskListing(outSL: TStrings);
@@ -481,12 +505,12 @@ begin
   end;
 end;
 
-function TUD2.FulfilsEverySubterm(conds: TUD2TDFConditionArray; slIdNames: TStrings=nil): boolean;
+function TUD2.FulfilsEverySubterm(conds: TUD2TDFConditionArray; slIdNames: TStrings=nil; AErrorOut: TStrings=nil): boolean;
 begin
-  result := FulfilsEverySubterm(UD2_CondsToStr(conds), slIdNames);
+  result := FulfilsEverySubterm(UD2_CondsToStr(conds), slIdNames, AErrorOut);
 end;
 
-function TUD2.FulfilsEverySubterm(idTerm: WideString; slIdNames: TStrings=nil): boolean;
+function TUD2.FulfilsEverySubterm(idTerm: WideString; slIdNames: TStrings=nil; AErrorOut: TStrings=nil): boolean;
 var
   i: integer;
   p: TUD2Plugin;
@@ -495,6 +519,15 @@ var
   cond: TUD2TDFCondition;
   idName: string;
 begin
+  {$IFDEF NO_CONDITIONS_IS_FAILURE}
+  if idTerm = '' then
+  begin
+    SetLength(conds, 0);
+    result := false;
+    Exit;
+  end;
+  {$ENDIF}
+
   cleanUpStringList := slIdNames = nil;
   try
     if cleanUpStringList then
@@ -515,7 +548,7 @@ begin
         p := FindPluginByMethodNameOrGuid(cond.idMethodName);
         if Assigned(p) then
         begin
-          if p.InvokeDynamicCheck(cond.dynamicData) then
+          if p.InvokeDynamicCheck(cond.dynamicData, AErrorOut) then
           begin
             // Reload the identifications
             slIdNames.Clear;
@@ -557,7 +590,7 @@ begin
   end;
 end;
 
-function TUD2.GetCommandList(ShortTaskName: string): TUD2CommandArray;
+function TUD2.GetCommandList(ShortTaskName: string; AErrorOut: TStrings=nil): TUD2CommandArray;
 var
   i, j, l: integer;
   slSV, slIdNames: TStrings;
@@ -575,7 +608,7 @@ begin
       FIniFile.ReadSectionValues(ShortTaskName, slSV);
       for i := 0 to slSV.Count-1 do
       begin
-        tmpCmds := CheckTerm(slSV.Strings[i], slIdNames);
+        tmpCmds := CheckTerm(slSV.Strings[i], slIdNames, AErrorOut);
         for j := Low(tmpCmds) to High(tmpCmds) do
         begin
           l := Length(result);
@@ -591,7 +624,7 @@ begin
   end;
 end;
 
-function TUD2.CheckTerm(idTermAndCmd: string; slIdNames: TStrings=nil): TUD2CommandArray;
+function TUD2.CheckTerm(idTermAndCmd: string; slIdNames: TStrings=nil; AErrorOut: TStrings=nil): TUD2CommandArray;
 var
   slIdNamesCreated: boolean;
   ent: TUD2TDFEntry;
@@ -608,7 +641,7 @@ begin
     end;
 
     if not UD2P_ParseTdfLine(idTermAndCmd, ent) then Exit;
-    if FulfilsEverySubterm(ent.ids, slIdNames) then
+    if FulfilsEverySubterm(ent.ids, slIdNames, AErrorOut) then
     begin
       result := ent.commands;
     end;
@@ -630,7 +663,7 @@ constructor TUD2PluginLoader.Create(Suspended: boolean; DLL: string; alngid: LAN
 begin
   inherited Create(Suspended);
   dllfile := dll;
-  pl := nil;
+  Plugin := nil;
   Errors := TStringList.Create;
   lngid := alngid;
   self.useDynamicData := useDynamicData;
@@ -698,8 +731,8 @@ var
         sOverrideGUID := iniConfig.ReadString('Compatibility', 'OverrideGUID', '');
         if sOverrideGUID <> '' then
         begin
-          pl.FPluginGUIDSet := true;
-          pl.FPluginGUID := StringToGUID(sOverrideGUID);
+          Plugin.FPluginGUIDSet := true;
+          Plugin.FPluginGUID := StringToGUID(sOverrideGUID);
           result := true;
         end;
       finally
@@ -728,12 +761,12 @@ var
 
   procedure _OverwriteStatusToOSNotSupported;
   begin
-    pl := TUD2Plugin.Create;
-    pl.FPluginDLL := dllFile;
+    Plugin := TUD2Plugin.Create;
+    Plugin.FPluginDLL := dllFile;
     statusCode := UD2_STATUS_NOTAVAIL_OS_NOT_SUPPORTED;
-    pl.FIdentificationProcedureStatusCode := statusCode;
-    pl.FIdentificationProcedureStatusCodeDescribed := _ErrorLookup(statusCode);
-    pl.FOSNotSupportedEnforced := true;
+    Plugin.FIdentificationProcedureStatusCode := statusCode;
+    Plugin.FIdentificationProcedureStatusCodeDescribed := _ErrorLookup(statusCode);
+    Plugin.FOSNotSupportedEnforced := true;
     result := true;
   end;
 
@@ -780,16 +813,16 @@ begin
           Exit;
         end;
 
-        pl := TUD2Plugin.Create;
-        pl.FPluginDLL := dllFile;
+        Plugin := TUD2Plugin.Create;
+        Plugin.FPluginDLL := dllFile;
 
         @fDynamicIdentificationStringW := GetProcAddress(dllHandle, mnDynamicIdentificationStringW);
-        pl.FAcceptsDynamicRequests := Assigned(fDynamicIdentificationStringW);
+        Plugin.FAcceptsDynamicRequests := Assigned(fDynamicIdentificationStringW);
 
         fIdentificationStringW := nil;
         if useDynamicData then
         begin
-          if not pl.AcceptsDynamicRequests then
+          if not Plugin.AcceptsDynamicRequests then
           begin
             // TODO xxx: Darf hier ein fataler Fehler entstehen, obwohl dieses Szenario nur durch die INI file auftreten kann?
             // TODO (allgemein): doku
@@ -857,8 +890,8 @@ begin
             Errors.Add(Format(LNG_METHOD_NOT_FOUND, [mnPluginIdentifier, dllFile]));
             Exit;
           end;
-          pl.FPluginGUIDSet := true;
-          pl.FPluginGUID := fPluginIdentifier();
+          Plugin.FPluginGUIDSet := true;
+          Plugin.FPluginGUID := fPluginIdentifier();
         end;
 
         statusCode := fCheckLicense(nil);
@@ -870,8 +903,8 @@ begin
 
         ZeroMemory(@buf, cchBufferSize);
         statusCode := fPluginNameW(@buf, cchBufferSize, lngID);
-             if statusCode.wCategory = UD2_STATUSCAT_SUCCESS   then pl.FPluginName := PWideChar(@buf)
-        else if statusCode.wCategory = UD2_STATUSCAT_NOT_AVAIL then pl.FPluginName := ''
+             if statusCode.wCategory = UD2_STATUSCAT_SUCCESS   then Plugin.FPluginName := PWideChar(@buf)
+        else if statusCode.wCategory = UD2_STATUSCAT_NOT_AVAIL then Plugin.FPluginName := ''
         else
         begin
           Errors.Add(Format(LNG_METHOD_FAILURE, [_ErrorLookup(statusCode), mnPluginNameW, dllFile]));
@@ -880,8 +913,8 @@ begin
 
         ZeroMemory(@buf, cchBufferSize);
         statusCode := fPluginVendorW(@buf, cchBufferSize, lngID);
-             if statusCode.wCategory = UD2_STATUSCAT_SUCCESS   then pl.FPluginVendor := PWideChar(@buf)
-        else if statusCode.wCategory = UD2_STATUSCAT_NOT_AVAIL then pl.FPluginVendor := ''
+             if statusCode.wCategory = UD2_STATUSCAT_SUCCESS   then Plugin.FPluginVendor := PWideChar(@buf)
+        else if statusCode.wCategory = UD2_STATUSCAT_NOT_AVAIL then Plugin.FPluginVendor := ''
         else
         begin
           Errors.Add(Format(LNG_METHOD_FAILURE, [_ErrorLookup(statusCode), mnPluginVendorW, dllFile]));
@@ -890,8 +923,8 @@ begin
 
         ZeroMemory(@buf, cchBufferSize);
         statusCode := fPluginVersionW(@buf, cchBufferSize, lngID);
-             if statusCode.wCategory = UD2_STATUSCAT_SUCCESS   then pl.FPluginVersion := PWideChar(@buf)
-        else if statusCode.wCategory = UD2_STATUSCAT_NOT_AVAIL then pl.FPluginVersion := ''
+             if statusCode.wCategory = UD2_STATUSCAT_SUCCESS   then Plugin.FPluginVersion := PWideChar(@buf)
+        else if statusCode.wCategory = UD2_STATUSCAT_NOT_AVAIL then Plugin.FPluginVersion := ''
         else
         begin
           Errors.Add(Format(LNG_METHOD_FAILURE, [_ErrorLookup(statusCode), mnPluginVersionW, dllFile]));
@@ -900,8 +933,8 @@ begin
 
         ZeroMemory(@buf, cchBufferSize);
         statusCode := fIdentificationMethodNameW(@buf, cchBufferSize);
-             if statusCode.wCategory = UD2_STATUSCAT_SUCCESS   then pl.FIdentificationMethodName := PWideChar(@buf)
-        else if statusCode.wCategory = UD2_STATUSCAT_NOT_AVAIL then pl.FIdentificationMethodName := ''
+             if statusCode.wCategory = UD2_STATUSCAT_SUCCESS   then Plugin.FIdentificationMethodName := PWideChar(@buf)
+        else if statusCode.wCategory = UD2_STATUSCAT_NOT_AVAIL then Plugin.FIdentificationMethodName := ''
         else
         begin
           Errors.Add(Format(LNG_METHOD_FAILURE, [_ErrorLookup(statusCode), mnIdentificationMethodNameW, dllFile]));
@@ -918,8 +951,8 @@ begin
         begin
           statusCode := fIdentificationStringW(@buf, cchBufferSize);
         end;
-        pl.FIdentificationProcedureStatusCode := statusCode;
-        pl.FIdentificationProcedureStatusCodeDescribed := _ErrorLookup(statusCode);
+        Plugin.FIdentificationProcedureStatusCode := statusCode;
+        Plugin.FIdentificationProcedureStatusCodeDescribed := _ErrorLookup(statusCode);
         if statusCode.wCategory = UD2_STATUSCAT_SUCCESS then
         begin
           sIdentifier := PWideChar(@buf);
@@ -930,12 +963,12 @@ begin
             ResultIdentifiers := SplitString(UD2_MULTIPLE_ITEMS_DELIMITER, sIdentifier);
             for i := Low(ResultIdentifiers) to High(ResultIdentifiers) do
             begin
-              pl.AddIdentification(ResultIdentifiers[i]);
+              Plugin.AddIdentification(ResultIdentifiers[i]);
             end;
           end
           else
           begin
-            pl.AddIdentification(sIdentifier);
+            Plugin.AddIdentification(sIdentifier);
 
             SetLength(ResultIdentifiers, 1);
             ResultIdentifiers[0] := sIdentifier;
@@ -950,13 +983,13 @@ begin
           end;
 
           // Errors.Add(Format(LNG_METHOD_FAILURE, [_ErrorLookup(statusCode), mnIdentificationStringW, dllFile]));
-          Errors.Add(Format(LNG_METHOD_FAILURE, [pl.IdentificationProcedureStatusCodeDescribed, mnIdentificationStringW, dllFile]));
+          Errors.Add(Format(LNG_METHOD_FAILURE, [Plugin.IdentificationProcedureStatusCodeDescribed, mnIdentificationStringW, dllFile]));
           Exit;
         end;
 
         result := true;
       finally
-        if not result and Assigned(pl) then FreeAndNil(pl);
+        if not result and Assigned(Plugin) then FreeAndNil(Plugin);
         FreeLibrary(dllHandle);
       end;
     finally
@@ -967,7 +1000,7 @@ begin
         endtime := GetTickCount;
         time := endtime - starttime;
         if endtime < starttime then time := High(Cardinal) - time;
-        pl.FLoadingTime := time;
+        Plugin.FLoadingTime := time;
       end;
     end;
   except

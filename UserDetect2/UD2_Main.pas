@@ -11,12 +11,14 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, Grids, ValEdit, UD2_Obj, ComCtrls, ImgList, ExtCtrls,
-  CommCtrl, Menus, VTSListView, VTSCompat;
+  CommCtrl, Menus, VTSListView, VTSCompat, UD2_PluginStatus;
 
 const
   DefaultIniFile = 'UserDetect2.ini';
-  DefaultWarnIfNothingMatches = 'false';
-  TagWarnIfNothingMatches = 'WarnIfNothingMatches';
+  DefaultWarnIfNothingMatchesGUI = 'true';
+  TagWarnIfNothingMatchesGUI = 'WarnIfNothingMatches.GUI';
+  DefaultWarnIfNothingMatchesCLI = 'false';
+  TagWarnIfNothingMatchesCLI = 'WarnIfNothingMatches.CLI';
   DefaultCloseAfterLaunching = 'false';
   TagCloseAfterLaunching = 'CloseAfterLaunching';
   TagIcon = 'Icon';
@@ -93,7 +95,7 @@ type
     procedure LoadLoadedPluginList;
     procedure LoadDynamicPluginList;
     function GetIniFileName: string;
-    procedure DoRun(ShortTaskName: string);
+    procedure DoRun(ShortTaskName: string; gui: boolean);
     procedure CheckForErrors;
   public
     procedure Run;
@@ -218,13 +220,14 @@ begin
   end;
 end;
 
-procedure TUD2MainForm.DoRun(ShortTaskName: string);
+procedure TUD2MainForm.DoRun(ShortTaskName: string; gui: boolean);
 resourcestring
   LNG_TASK_NOT_EXISTS = 'The task "%s" does not exist in the INI file.';
   LNG_NOTHING_MATCHES = 'No identification string matches to your environment. No application was launched. Please check the Task Definition File.';
 var
   i: integer;
   cmds: TUD2CommandArray;
+  showMismatchError: boolean;
 begin
   if not ud2.TaskExists(ShortTaskName) then
   begin
@@ -235,9 +238,14 @@ begin
   end;
 
   SetLength(cmds, 0);
-  cmds := ud2.GetCommandList(ShortTaskName);
+  cmds := ud2.GetCommandList(ShortTaskName); // TODO: What to do with AErrorOut (errors from dynamic queries?)
 
-  if (Length(cmds) = 0) and ud2.ReadMetatagBool(ShortTaskName, TagWarnIfNothingMatches, DefaultWarnIfNothingMatches) then
+  if gui then
+    showMismatchError := ud2.ReadMetatagBool(ShortTaskName, TagWarnIfNothingMatchesGUI, DefaultWarnIfNothingMatchesGUI)
+  else
+    showMismatchError := ud2.ReadMetatagBool(ShortTaskName, TagWarnIfNothingMatchesCLI, DefaultWarnIfNothingMatchesCLI);
+
+  if (Length(cmds) = 0) and showMismatchError then
   begin
     MessageDlg(LNG_NOTHING_MATCHES, mtWarning, [mbOK], 0);
     ExitCode := EXITCODE_TASK_NOTHING_MATCHES;
@@ -314,14 +322,15 @@ var
 begin
   IniTemplateMemo.Clear;
   IniTemplateMemo.Lines.Add('[ExampleTask1]');
-  IniTemplateMemo.Lines.Add('; Description: Optional but recommended');
-  IniTemplateMemo.Lines.Add('Description=Run Task #1');
-  IniTemplateMemo.Lines.Add('; WarnIfNothingMatches: Warns when no application was launched. Default: false.');
-  IniTemplateMemo.Lines.Add('WarnIfNothingMatches=false');
+  IniTemplateMemo.Lines.Add('; Optional but recommended');
+  IniTemplateMemo.Lines.Add(UD2_TagDescription+'=Run Task #1');
+  IniTemplateMemo.Lines.Add('; Warns when no application was launched. Default: false.');
+  IniTemplateMemo.Lines.Add(TagWarnIfNothingMatchesGUI+'='+DefaultWarnIfNothingMatchesGUI);
+  IniTemplateMemo.Lines.Add(TagWarnIfNothingMatchesCLI+'='+DefaultWarnIfNothingMatchesCLI);
   IniTemplateMemo.Lines.Add('; Optional: IconDLL + IconIndex');
-  IniTemplateMemo.Lines.Add('Icon=%SystemRoot%\system32\Shell32.dll,3');
+  IniTemplateMemo.Lines.Add(TagIcon+'=%SystemRoot%\system32\Shell32.dll,3');
   IniTemplateMemo.Lines.Add('; Optional: Can be true or false');
-  IniTemplateMemo.Lines.Add(TagCloseAfterLaunching+'=true');
+  IniTemplateMemo.Lines.Add(TagCloseAfterLaunching+'='+DefaultCloseAfterLaunching);
 
   for i := 0 to ud2.LoadedPlugins.Count-1 do
   begin
@@ -385,7 +394,7 @@ var
 begin
   if TasksListView.ItemIndex = -1 then exit;
   obj := TUD2ListViewEntry(TasksListView.Selected.Data);
-  DoRun(obj.ShortTaskName);
+  DoRun(obj.ShortTaskName, true);
   if obj.CloseAfterLaunching then Close;
 end;
 
@@ -566,7 +575,7 @@ begin
   end
   else if CheckBoolParam(2, 'T') then
   begin
-    DoRun(ParamStr(3));
+    DoRun(ParamStr(3), false);
 
     Visible := false;
     Close;
@@ -597,19 +606,39 @@ var
   p: TUD2Plugin;
   x: TArrayOfString;
   newStuff: boolean;
+  errors: TStrings;
 resourcestring
   LNG_DETECTED_DYNAMICS = 'The plugin returns following identification strings:';
   LNG_NOTHING_DETECTED = 'The plugin did not send any identification strings.';
+  LNG_STATUS_RETURNED = 'The plugin sent following status in reply to your request:';
+  LNG_ERROR_RETURNED = 'The dynamic plugin could not load. The plugin sent following error messages:';
 begin
   if DynamicTestPluginComboBox.ItemIndex = -1 then
   begin
     ShowMessage('Please select a plugin that is accepting dynamic requests.');
-    exit;
+    Exit;
   end;
 
   p := DynamicTestPluginComboBox.Items.Objects[DynamicTestPluginComboBox.ItemIndex] as TUD2Plugin;
 
-  newStuff := p.InvokeDynamicCheck(DynamicTestDataEdit.Text, x);
+  errors := TStringList.Create;
+  try
+    newStuff := p.InvokeDynamicCheck(DynamicTestDataEdit.Text, errors, x);
+    if errors.Count > 0 then
+    begin
+      ShowMessage(LNG_ERROR_RETURNED + #13#10#13#10 + errors.Text);
+      Exit;
+    end;
+  finally
+    FreeAndNil(errors);
+  end;
+
+  if p.IdentificationProcedureStatusCode.wCategory <> UD2_STATUSCAT_SUCCESS then
+  begin
+    // e.g. "Not available" because of invalid dynamic input data
+    ShowMessage(LNG_STATUS_RETURNED + #13#10#13#10 + p.IdentificationProcedureStatusCodeDescribed);
+    Exit;
+  end;
 
   if Length(x) > 0 then
     ShowMessage(LNG_DETECTED_DYNAMICS + #13#10#13#10 + MergeString(x, #13#10))
@@ -635,6 +664,7 @@ begin
     p := ud2.LoadedPlugins.Items[i] as TUD2Plugin;
     if p.AcceptsDynamicRequests then
     begin
+      // TODO: PROBLEM!! Beim Dynamic Check (Dynamic Query) wird der plugin status überschrieben!!!
       DynamicTestPluginComboBox.Items.AddObject(p.PluginName, p);
     end;
   end;

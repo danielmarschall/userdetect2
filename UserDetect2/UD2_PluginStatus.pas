@@ -116,6 +116,14 @@ const
     dwMessage: 5;
     dwExtraInfo: 0
   );
+  UD2_STATUS_NOTAVAIL_INVALID_INPUT: UD2_STATUS = (
+    cbSize: SizeOf(UD2_STATUS);
+    bReserved: 0;
+    wCategory: UD2_STATUSCAT_NOT_AVAIL;
+    grAuthority: UD2_STATUSAUTH_GENERIC_;
+    dwMessage: 6;
+    dwExtraInfo: 0
+  );
 
   (* Failure codes *)
 

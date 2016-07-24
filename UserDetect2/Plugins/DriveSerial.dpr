@@ -75,7 +75,7 @@ begin
   try
     if Copy(string(lpDynamicData), 2, 1) <> ':' then
     begin
-      result := UD2_STATUS_FAILURE_INVALID_ARGS;
+      result := UD2_STATUS_NOTAVAIL_INVALID_INPUT;
       exit;
     end;
 
@@ -83,7 +83,7 @@ begin
 
     if not (driveletter in ['A'..'Z']) then
     begin
-      result := UD2_STATUS_FAILURE_INVALID_ARGS;
+      result := UD2_STATUS_NOTAVAIL_INVALID_INPUT;
       exit;
     end;
 

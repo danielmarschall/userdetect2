@@ -31,5 +31,15 @@ TODO
 * TDF in XML?
 * mehrere commandos aufrufen in einer einzigen zeile, ohne BAT ?
 * Sollen Plugins sich selbst beschreiben dürfen (welche argumente bekommt ein dynamisches plugin?)
-* ist UD2_STATUS_FAILURE_INVALID_ARGS der korrekte fehlercode wenn die eingegebenen dynamischen daten ungültig sind?
 * brauchen wir escaping beim idString ?
+* MessageDlg instead of ShowMessage
+
+	plugin directory: alle util klassen in eigenen ordner
+	todos
+	dokumentation dynamic
+	new dynamic plugins
+	driveserial
+		(nur) wenn ich durchsteppe per compiler, dann passieren komische dinge
+			1. describe own status code wird aufgerufen
+			2. AV
+	eine funktion für die windows datenträger seriennummer
