@@ -131,6 +131,7 @@ object UD2MainForm: TUD2MainForm
           Height = 33
           Anchors = [akTop, akRight]
           Caption = 'Query'
+          Default = True
           TabOrder = 2
           OnClick = DynamicTestButtonClick
         end

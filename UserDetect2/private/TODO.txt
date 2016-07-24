@@ -30,3 +30,6 @@ TODO
 * Give .udp a file-type (icon)?
 * TDF in XML?
 * mehrere commandos aufrufen in einer einzigen zeile, ohne BAT ?
+* Sollen Plugins sich selbst beschreiben dürfen (welche argumente bekommt ein dynamisches plugin?)
+* ist UD2_STATUS_FAILURE_INVALID_ARGS der korrekte fehlercode wenn die eingegebenen dynamischen daten ungültig sind?
+* brauchen wir escaping beim idString ?
