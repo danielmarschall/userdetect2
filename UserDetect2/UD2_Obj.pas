@@ -153,6 +153,7 @@ resourcestring
   LNG_STATUS_NOTAVAIL_WINAPI_CALL_FAILURE = 'Not available (A Windows API call failed. Message: %s)';
   LNG_STATUS_NOTAVAIL_ONLY_ACCEPT_DYNAMIC = 'Not available (Arguments required)';
   LNG_STATUS_NOTAVAIL_INVALID_INPUT       = 'Not available (Plugin received invalid input)';
+  LNG_STATUS_NOTAVAIL_DOES_NOT_ACCEPT_DYNAMIC_REQUESTS = 'Not available (Plugin does not allow dynamic requests)';
   LNG_UNKNOWN_NOTAVAIL                    = 'Not available (Unknown status code %s)';
 
   LNG_STATUS_FAILURE_UNSPECIFIED          = 'Error (Unspecified)';
@@ -176,6 +177,7 @@ begin
   else if UD2_STATUS_Equal(grStatus, UD2_STATUS_NOTAVAIL_WINAPI_CALL_FAILURE, false) then result := Format(LNG_STATUS_NOTAVAIL_WINAPI_CALL_FAILURE, [FormatOSError(grStatus.dwExtraInfo)])
   else if UD2_STATUS_Equal(grStatus, UD2_STATUS_NOTAVAIL_ONLY_ACCEPT_DYNAMIC, false) then result := LNG_STATUS_NOTAVAIL_ONLY_ACCEPT_DYNAMIC
   else if UD2_STATUS_Equal(grStatus, UD2_STATUS_NOTAVAIL_INVALID_INPUT, false)       then result := LNG_STATUS_NOTAVAIL_INVALID_INPUT
+  else if UD2_STATUS_Equal(grStatus, UD2_STATUS_NOTAVAIL_DOES_NOT_ACCEPT_DYNAMIC_REQUESTS, false) then result := LNG_UD2_STATUS_NOTAVAIL_DOES_NOT_ACCEPT_DYNAMIC_REQUESTS
 
   else if UD2_STATUS_Equal(grStatus, UD2_STATUS_FAILURE_UNSPECIFIED, false)          then result := LNG_STATUS_FAILURE_UNSPECIFIED
   else if UD2_STATUS_Equal(grStatus, UD2_STATUS_FAILURE_BUFFER_TOO_SMALL, false)     then result := LNG_STATUS_FAILURE_BUFFER_TOO_SMALL
@@ -824,9 +826,22 @@ begin
         begin
           if not Plugin.AcceptsDynamicRequests then
           begin
-            // TODO xxx: Darf hier ein fataler Fehler entstehen, obwohl dieses Szenario nur durch die INI file auftreten kann?
-            // TODO (allgemein): doku
+            // We should not output a fatal error here, because it is likely that the error is caused by the user writing a buggy INI file (specifying a parameter for a non-dynamic plugin)
+            (*
             Errors.Add(Format(LNG_METHOD_NOT_FOUND, [mnDynamicIdentificationStringW, dllFile]));
+            Exit;
+            *)
+
+            // But we just try to find out if the plugin seems to be "OK"
+            if not Assigned(fIdentificationStringW) then
+            begin
+              Errors.Add(Format(LNG_METHOD_NOT_FOUND, [mnDynamicIdentificationStringW, dllFile]));
+              Exit;
+            end;
+
+            Plugin.FIdentificationProcedureStatusCode := UD2_STATUS_NOTAVAIL_DOES_NOT_ACCEPT_DYNAMIC_REQUESTS;
+            Plugin.FIdentificationProcedureStatusCodeDescribed := _ErrorLookup(statusCode);
+
             Exit;
           end;
         end
