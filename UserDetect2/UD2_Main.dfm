@@ -1,10 +1,10 @@
 object UD2MainForm: TUD2MainForm
   Left = 202
   Top = 139
-  Width = 897
-  Height = 519
-  ActiveControl = IdentificationsListView
+  ActiveControl = TasksListView
   Caption = 'ViaThinkSoft UserDetect2'
+  ClientHeight = 481
+  ClientWidth = 881
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -22,7 +22,7 @@ object UD2MainForm: TUD2MainForm
     Top = 0
     Width = 881
     Height = 481
-    ActivePage = TabSheet2
+    ActivePage = TasksTabSheet
     Align = alClient
     TabOrder = 0
     object TasksTabSheet: TTabSheet
@@ -34,9 +34,10 @@ object UD2MainForm: TUD2MainForm
         Height = 453
         Align = alClient
         Columns = <>
-        Items.Data = {
-          3B0000000200000000000000FFFFFFFFFFFFFFFF000000000000000004746573
-          7400000000FFFFFFFFFFFFFFFF0000000000000000057465737432}
+        Items.ItemData = {
+          05460000000200000000000000FFFFFFFFFFFFFFFF00000000FFFFFFFF000000
+          0004740065007300740000000000FFFFFFFFFFFFFFFF00000000FFFFFFFF0000
+          00000574006500730074003200}
         LargeImages = TasksImageList
         ReadOnly = True
         PopupMenu = TasksPopupMenu
@@ -113,7 +114,6 @@ object UD2MainForm: TUD2MainForm
           Width = 225
           Height = 21
           Style = csDropDownList
-          ItemHeight = 13
           TabOrder = 0
         end
         object DynamicTestDataEdit: TEdit
@@ -666,7 +666,7 @@ object UD2MainForm: TUD2MainForm
         Top = 64
         Width = 15
         Height = 13
-        Caption = '2.2'
+        Caption = '2.3'
       end
       object Memo1: TMemo
         Left = 264
@@ -2228,7 +2228,7 @@ object UD2MainForm: TUD2MainForm
     Left = 560
     Top = 32
     Bitmap = {
-      494C010101000400040020002000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C0101010004000C0020002000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000800000002000000001002000000000000040
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

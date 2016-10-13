@@ -70,7 +70,7 @@ end;
 function DynamicIdentificationStringW(lpIdentifier: LPWSTR; cchSize: DWORD; lpDynamicData: LPWSTR): UD2_STATUS; cdecl;
 var
   stIdentifier: WideString;
-  driveletter: char;
+  driveletter: AnsiChar;
 begin
   try
     if Copy(string(lpDynamicData), 2, 1) <> ':' then
@@ -79,7 +79,7 @@ begin
       exit;
     end;
 
-    driveletter := Copy(UpperCase(lpDynamicData), 1, 1)[1];
+    driveletter := AnsiChar(Copy(UpperCase(lpDynamicData), 1, 1)[1]);
 
     if not (driveletter in ['A'..'Z']) then
     begin

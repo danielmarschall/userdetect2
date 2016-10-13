@@ -46,7 +46,7 @@ function UD2_SetThreadErrorMode(dwNewMode: DWORD; lpOldMode: LPDWORD): BOOL;
 implementation
 
 uses
-  WinInet, Forms;
+  idhttp, Forms;
 
 function SplitString(const aSeparator, aString: string; aMax: Integer = 0): TArrayOfString;
 // http://stackoverflow.com/a/2626991/3544341
@@ -289,85 +289,16 @@ begin
   {$ENDIF}
 end;
 
-function GetHTML(AUrl: string): string;
-// http://www.delphipraxis.net/post43515.html
-// Modificated by ViaThinkSoft
+function GetHTML(const url: string): string;
 var
-  databuffer : array[0..4095] of char;
-  ResStr : string;
-  hSession, hfile: hInternet;
-  dwindex,dwcodelen,dwread,dwNumber: cardinal;
-  dwcode : array[1..20] of char;
-  res    : pchar;
-  Str    : pchar;
+  idhttp :Tidhttp;
 begin
-  ResStr := '';
-  if system.pos('http://',lowercase(AUrl)) = 0 then
-  begin
-     AUrl:='http://'+AUrl;
+  idhttp := Tidhttp.Create(nil);
+  try
+    result := idhttp.Get(url);
+  finally
+    idhttp.Free;
   end;
-
-  // [ViaThinkSoft] Added
-  Application.ProcessMessages;
-
-  hSession:=InternetOpen('InetURL:/1.0',
-                         INTERNET_OPEN_TYPE_PRECONFIG,
-                         nil,
-                         nil,
-                         0);
-  if assigned(hsession) then
-  begin
-    // [ViaThinkSoft] Added
-    Application.ProcessMessages;
-
-    hfile := InternetOpenUrl(hsession,
-                             pchar(AUrl),
-                             nil,
-                             0,
-                             INTERNET_FLAG_RELOAD,
-                             0);
-    dwIndex   := 0;
-    dwCodeLen := 10;
-
-    // [ViaThinkSoft] Added
-    Application.ProcessMessages;
-
-    HttpQueryInfo(hfile,
-                  HTTP_QUERY_STATUS_CODE,
-                  @dwcode,
-                  dwcodeLen,
-                  dwIndex);
-    res := pchar(@dwcode);
-    dwNumber := sizeof(databuffer)-1;
-    if (res ='200') or (res ='302') then
-    begin
-      while (InternetReadfile(hfile,
-                              @databuffer,
-                              dwNumber,
-                              DwRead)) do
-      begin
-
-        // [ViaThinkSoft] Added
-        Application.ProcessMessages;
-
-        if dwRead =0 then
-          break;
-        databuffer[dwread]:=#0;
-        Str := pchar(@databuffer);
-        resStr := resStr + Str;
-      end;
-    end
-    else
-      ResStr := 'Status:'+res;
-    if assigned(hfile) then
-      InternetCloseHandle(hfile);
-  end;
-
-  // Hinzugefügt
-  Application.ProcessMessages;
-
-  InternetCloseHandle(hsession);
-  Result := resStr; 
 end;
 
 procedure VTS_CheckUpdates(VTSID, CurVer: string);

@@ -16,7 +16,7 @@ function GetDomainName(var outDomainName: WideString): boolean;
 implementation
 
 uses
-  iphlp, WinSock, Registry;
+  iphlpapi, IpTypes, Iprtrmib, WinSock, Registry;
 
 // TODO: Replace GetAdaptersInfo()? A comment at MSDN states that there might be problems with IPv6
 //           "GetAdaptersInfo returns ERROR_NO_DATA if there are only IPv6 interfaces
@@ -25,16 +25,17 @@ uses
 function GetLocalIPAddressList(outsl: TStrings): DWORD;
 var
   pAdapterInfo: PIP_ADAPTER_INFO;
-  addr: string;
+  addr: AnsiString;
   addrStr: IP_ADDR_STRING;
   BufLen: Cardinal;
 begin
   BufLen := SizeOf(IP_ADAPTER_INFO);
-  Result := GetAdaptersInfo(nil, @BufLen);
+  Result := GetAdaptersInfo(nil, BufLen);
   if Result <> ERROR_BUFFER_OVERFLOW then Exit;
   pAdapterInfo := AllocMem(BufLen);
   try
-    Result := GetAdaptersInfo(pAdapterInfo, @BufLen);
+    ZeroMemory(pAdapterInfo, BufLen);
+    Result := GetAdaptersInfo(pAdapterInfo, BufLen);
     if Result <> ERROR_SUCCESS then Exit;
     while pAdapterInfo <> nil do
     begin
@@ -56,16 +57,17 @@ end;
 function GetDHCPIPAddressList(outsl: TStrings): DWORD;
 var
   pAdapterInfo: PIP_ADAPTER_INFO;
-  addr: string;
+  addr: AnsiString;
   addrStr: IP_ADDR_STRING;
   BufLen: Cardinal;
 begin
   BufLen := SizeOf(IP_ADAPTER_INFO);
-  Result := GetAdaptersInfo(nil, @BufLen);
+  Result := GetAdaptersInfo(nil, BufLen);
   if Result <> ERROR_BUFFER_OVERFLOW then Exit;
   pAdapterInfo := AllocMem(BufLen);
   try
-    Result := GetAdaptersInfo(pAdapterInfo, @BufLen);
+    ZeroMemory(pAdapterInfo, BufLen);
+    Result := GetAdaptersInfo(pAdapterInfo, BufLen);
     if Result <> ERROR_SUCCESS then Exit;
     while pAdapterInfo <> nil do
     begin
@@ -87,16 +89,17 @@ end;
 function GetGatewayIPAddressList(outsl: TStrings): DWORD;
 var
   pAdapterInfo: PIP_ADAPTER_INFO;
-  addr: string;
+  addr: AnsiString;
   addrStr: IP_ADDR_STRING;
   BufLen: Cardinal;
 begin
   BufLen := SizeOf(IP_ADAPTER_INFO);
-  Result := GetAdaptersInfo(nil, @BufLen);
+  Result := GetAdaptersInfo(nil, BufLen);
   if Result <> ERROR_BUFFER_OVERFLOW then Exit;
   pAdapterInfo := AllocMem(BufLen);
   try
-    Result := GetAdaptersInfo(pAdapterInfo, @BufLen);
+    ZeroMemory(pAdapterInfo, BufLen);
+    Result := GetAdaptersInfo(pAdapterInfo, BufLen);
     if Result <> ERROR_SUCCESS then Exit;
     while pAdapterInfo <> nil do
     begin
@@ -130,7 +133,7 @@ begin
     ZeroMemory(@MacAddr, SizeOf(MacAddr));
     DestIP     := inet_addr(PAnsiChar(IPAddress));
     PhyAddrLen := SizeOf(MacAddr); // TODO: more ?
-    Result     := SendArp(DestIP, 0, @MacAddr, @PhyAddrLen);
+    Result     := SendArp(DestIP, 0, @MacAddr, PhyAddrLen);
     if Result = S_OK then
     begin
       outAddress := '';
@@ -146,16 +149,9 @@ begin
 end;
 
 function GetLocalMACAddressList(outSL: TStrings): DWORD;
-const
-  _MAX_ROWS_ = 100;
-type
-  _IfTable = Record
-    nRows: LongInt;
-    ifRow: Array[1.._MAX_ROWS_] of MIB_IFROW;
-  end;
 var
-  pIfTable: ^_IfTable;
-  TableSize: LongInt;
+  pIfTable: PMIB_IFTABLE;
+  TableSize: Cardinal;
   tmp: String;
   i, j: Integer;
 begin
@@ -163,10 +159,9 @@ begin
   try
     // First: just get the buffer size.
     // TableSize returns the size needed.
-    TableSize := 0; // Set to zero so the GetIfTabel function
-    // won't try to fill the buffer yet,
-    // but only return the actual size it needs.
-    GetIfTable(pIfTable, TableSize, 1);
+    TableSize := 0; // Set to zero so the GetIfTable function won't try to fill the buffer yet,
+                    // but only return the actual size it needs.
+    GetIfTable(pIfTable, TableSize, true);
     if (TableSize < SizeOf(MIB_IFROW)+SizeOf(LongInt)) then
     begin
       Result := ERROR_NO_DATA;
@@ -177,18 +172,18 @@ begin
     // allocate memory for the buffer and retrieve the
     // entire table.
     GetMem(pIfTable, TableSize);
-    Result := GetIfTable(pIfTable, TableSize, 1);
+    Result := GetIfTable(pIfTable, TableSize, true);
     if Result <> NO_ERROR then Exit;
 
     // Read the ETHERNET addresses.
-    for i := 1 to pIfTable^.nRows do
+    for i := 1 to pIfTable^.dwNumEntries do
     begin
-      //if pIfTable^.ifRow[i].dwType=MIB_IF_TYPE_ETHERNET then
+      //if pIfTable^.table[i].dwType = MIB_IF_TYPE_ETHERNET then
       begin
         tmp := '';
-        for j := 0 to pIfTable^.ifRow[i].dwPhysAddrLen-1 do
+        for j := 0 to pIfTable^.table[i].dwPhysAddrLen-1 do
         begin
-          tmp := tmp + format('%.2x', [pIfTable^.ifRow[i].bPhysAddr[j]]);
+          tmp := tmp + format('%.2x', [pIfTable^.table[i].bPhysAddr[j]]);
         end;
         tmp := FormatMAC(tmp);
         if (tmp <> '') and (outSL.IndexOf(tmp) = -1) then

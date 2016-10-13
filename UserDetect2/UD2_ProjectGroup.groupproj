@@ -1,0 +1,300 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{49186958-33CD-42BE-A0F8-EB2E8502F148}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="UserDetect2.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Plugins\DHCP_IP.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Plugins\DHCP_MAC.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Plugins\DomainName.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Plugins\DriveSerial.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Plugins\EnvironmentString.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Plugins\ExecuteAlways.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Plugins\GatewayIP.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Plugins\GatewayMAC.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Plugins\HomeDir.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Plugins\HomeDirUNC.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Plugins\HomeShare.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Plugins\LAN_IP.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Plugins\LAN_MAC.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Plugins\MachineSID.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Plugins\TestDynamicEcho.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Plugins\UserName.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Plugins\WinBuildNumber.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Plugins\WinMajorVersion.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Plugins\WinMinorVersion.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Plugins\WinVersion.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Plugins\AccountSID.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Plugins\ComputerName.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="UserDetect2">
+        <MSBuild Projects="UserDetect2.dproj"/>
+    </Target>
+    <Target Name="UserDetect2:Clean">
+        <MSBuild Projects="UserDetect2.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="UserDetect2:Make">
+        <MSBuild Projects="UserDetect2.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DHCP_IP">
+        <MSBuild Projects="Plugins\DHCP_IP.dproj"/>
+    </Target>
+    <Target Name="DHCP_IP:Clean">
+        <MSBuild Projects="Plugins\DHCP_IP.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DHCP_IP:Make">
+        <MSBuild Projects="Plugins\DHCP_IP.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DHCP_MAC">
+        <MSBuild Projects="Plugins\DHCP_MAC.dproj"/>
+    </Target>
+    <Target Name="DHCP_MAC:Clean">
+        <MSBuild Projects="Plugins\DHCP_MAC.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DHCP_MAC:Make">
+        <MSBuild Projects="Plugins\DHCP_MAC.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DomainName">
+        <MSBuild Projects="Plugins\DomainName.dproj"/>
+    </Target>
+    <Target Name="DomainName:Clean">
+        <MSBuild Projects="Plugins\DomainName.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DomainName:Make">
+        <MSBuild Projects="Plugins\DomainName.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DriveSerial">
+        <MSBuild Projects="Plugins\DriveSerial.dproj"/>
+    </Target>
+    <Target Name="DriveSerial:Clean">
+        <MSBuild Projects="Plugins\DriveSerial.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DriveSerial:Make">
+        <MSBuild Projects="Plugins\DriveSerial.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="EnvironmentString">
+        <MSBuild Projects="Plugins\EnvironmentString.dproj"/>
+    </Target>
+    <Target Name="EnvironmentString:Clean">
+        <MSBuild Projects="Plugins\EnvironmentString.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="EnvironmentString:Make">
+        <MSBuild Projects="Plugins\EnvironmentString.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="ExecuteAlways">
+        <MSBuild Projects="Plugins\ExecuteAlways.dproj"/>
+    </Target>
+    <Target Name="ExecuteAlways:Clean">
+        <MSBuild Projects="Plugins\ExecuteAlways.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ExecuteAlways:Make">
+        <MSBuild Projects="Plugins\ExecuteAlways.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="GatewayIP">
+        <MSBuild Projects="Plugins\GatewayIP.dproj"/>
+    </Target>
+    <Target Name="GatewayIP:Clean">
+        <MSBuild Projects="Plugins\GatewayIP.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="GatewayIP:Make">
+        <MSBuild Projects="Plugins\GatewayIP.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="GatewayMAC">
+        <MSBuild Projects="Plugins\GatewayMAC.dproj"/>
+    </Target>
+    <Target Name="GatewayMAC:Clean">
+        <MSBuild Projects="Plugins\GatewayMAC.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="GatewayMAC:Make">
+        <MSBuild Projects="Plugins\GatewayMAC.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="HomeDir">
+        <MSBuild Projects="Plugins\HomeDir.dproj"/>
+    </Target>
+    <Target Name="HomeDir:Clean">
+        <MSBuild Projects="Plugins\HomeDir.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="HomeDir:Make">
+        <MSBuild Projects="Plugins\HomeDir.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="HomeDirUNC">
+        <MSBuild Projects="Plugins\HomeDirUNC.dproj"/>
+    </Target>
+    <Target Name="HomeDirUNC:Clean">
+        <MSBuild Projects="Plugins\HomeDirUNC.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="HomeDirUNC:Make">
+        <MSBuild Projects="Plugins\HomeDirUNC.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="HomeShare">
+        <MSBuild Projects="Plugins\HomeShare.dproj"/>
+    </Target>
+    <Target Name="HomeShare:Clean">
+        <MSBuild Projects="Plugins\HomeShare.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="HomeShare:Make">
+        <MSBuild Projects="Plugins\HomeShare.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="LAN_IP">
+        <MSBuild Projects="Plugins\LAN_IP.dproj"/>
+    </Target>
+    <Target Name="LAN_IP:Clean">
+        <MSBuild Projects="Plugins\LAN_IP.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="LAN_IP:Make">
+        <MSBuild Projects="Plugins\LAN_IP.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="LAN_MAC">
+        <MSBuild Projects="Plugins\LAN_MAC.dproj"/>
+    </Target>
+    <Target Name="LAN_MAC:Clean">
+        <MSBuild Projects="Plugins\LAN_MAC.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="LAN_MAC:Make">
+        <MSBuild Projects="Plugins\LAN_MAC.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MachineSID">
+        <MSBuild Projects="Plugins\MachineSID.dproj"/>
+    </Target>
+    <Target Name="MachineSID:Clean">
+        <MSBuild Projects="Plugins\MachineSID.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MachineSID:Make">
+        <MSBuild Projects="Plugins\MachineSID.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="TestDynamicEcho">
+        <MSBuild Projects="Plugins\TestDynamicEcho.dproj"/>
+    </Target>
+    <Target Name="TestDynamicEcho:Clean">
+        <MSBuild Projects="Plugins\TestDynamicEcho.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TestDynamicEcho:Make">
+        <MSBuild Projects="Plugins\TestDynamicEcho.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="UserName">
+        <MSBuild Projects="Plugins\UserName.dproj"/>
+    </Target>
+    <Target Name="UserName:Clean">
+        <MSBuild Projects="Plugins\UserName.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="UserName:Make">
+        <MSBuild Projects="Plugins\UserName.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="WinBuildNumber">
+        <MSBuild Projects="Plugins\WinBuildNumber.dproj"/>
+    </Target>
+    <Target Name="WinBuildNumber:Clean">
+        <MSBuild Projects="Plugins\WinBuildNumber.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="WinBuildNumber:Make">
+        <MSBuild Projects="Plugins\WinBuildNumber.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="WinMajorVersion">
+        <MSBuild Projects="Plugins\WinMajorVersion.dproj"/>
+    </Target>
+    <Target Name="WinMajorVersion:Clean">
+        <MSBuild Projects="Plugins\WinMajorVersion.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="WinMajorVersion:Make">
+        <MSBuild Projects="Plugins\WinMajorVersion.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="WinMinorVersion">
+        <MSBuild Projects="Plugins\WinMinorVersion.dproj"/>
+    </Target>
+    <Target Name="WinMinorVersion:Clean">
+        <MSBuild Projects="Plugins\WinMinorVersion.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="WinMinorVersion:Make">
+        <MSBuild Projects="Plugins\WinMinorVersion.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="WinVersion">
+        <MSBuild Projects="Plugins\WinVersion.dproj"/>
+    </Target>
+    <Target Name="WinVersion:Clean">
+        <MSBuild Projects="Plugins\WinVersion.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="WinVersion:Make">
+        <MSBuild Projects="Plugins\WinVersion.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="AccountSID">
+        <MSBuild Projects="Plugins\AccountSID.dproj"/>
+    </Target>
+    <Target Name="AccountSID:Clean">
+        <MSBuild Projects="Plugins\AccountSID.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="AccountSID:Make">
+        <MSBuild Projects="Plugins\AccountSID.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="ComputerName">
+        <MSBuild Projects="Plugins\ComputerName.dproj"/>
+    </Target>
+    <Target Name="ComputerName:Clean">
+        <MSBuild Projects="Plugins\ComputerName.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ComputerName:Make">
+        <MSBuild Projects="Plugins\ComputerName.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="UserDetect2;DHCP_IP;DHCP_MAC;DomainName;DriveSerial;EnvironmentString;ExecuteAlways;GatewayIP;GatewayMAC;HomeDir;HomeDirUNC;HomeShare;LAN_IP;LAN_MAC;MachineSID;TestDynamicEcho;UserName;WinBuildNumber;WinMajorVersion;WinMinorVersion;WinVersion;AccountSID;ComputerName"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="UserDetect2:Clean;DHCP_IP:Clean;DHCP_MAC:Clean;DomainName:Clean;DriveSerial:Clean;EnvironmentString:Clean;ExecuteAlways:Clean;GatewayIP:Clean;GatewayMAC:Clean;HomeDir:Clean;HomeDirUNC:Clean;HomeShare:Clean;LAN_IP:Clean;LAN_MAC:Clean;MachineSID:Clean;TestDynamicEcho:Clean;UserName:Clean;WinBuildNumber:Clean;WinMajorVersion:Clean;WinMinorVersion:Clean;WinVersion:Clean;AccountSID:Clean;ComputerName:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="UserDetect2:Make;DHCP_IP:Make;DHCP_MAC:Make;DomainName:Make;DriveSerial:Make;EnvironmentString:Make;ExecuteAlways:Make;GatewayIP:Make;GatewayMAC:Make;HomeDir:Make;HomeDirUNC:Make;HomeShare:Make;LAN_IP:Make;LAN_MAC:Make;MachineSID:Make;TestDynamicEcho:Make;UserName:Make;WinBuildNumber:Make;WinMajorVersion:Make;WinMinorVersion:Make;WinVersion:Make;AccountSID:Make;ComputerName:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

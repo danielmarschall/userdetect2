@@ -11,7 +11,8 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, Grids, ValEdit, UD2_Obj, ComCtrls, ImgList, ExtCtrls,
-  CommCtrl, Menus, VTSListView, VTSCompat, UD2_PluginStatus;
+  CommCtrl, Menus, VTSListView, VTSCompat, UD2_PluginStatus, Contnrs,
+  System.ImageList;
 
 const
   DefaultIniFile = 'UserDetect2.ini';
