@@ -16,7 +16,12 @@ function GetDomainName(var outDomainName: WideString): boolean;
 implementation
 
 uses
-  iphlpapi, IpTypes, Iprtrmib, WinSock, Registry;
+  {$IFDEF UNICODE}
+  iphlpapi, IpTypes, Iprtrmib,
+  {$ELSE}
+  iphlp,
+  {$ENDIF}
+  WinSock, Registry;
 
 // TODO: Replace GetAdaptersInfo()? A comment at MSDN states that there might be problems with IPv6
 //           "GetAdaptersInfo returns ERROR_NO_DATA if there are only IPv6 interfaces
@@ -27,7 +32,7 @@ var
   pAdapterInfo: PIP_ADAPTER_INFO;
   addr: AnsiString;
   addrStr: IP_ADDR_STRING;
-  BufLen: Cardinal;
+  BufLen: ULONG;
 begin
   BufLen := SizeOf(IP_ADAPTER_INFO);
   Result := GetAdaptersInfo(nil, BufLen);
@@ -59,7 +64,7 @@ var
   pAdapterInfo: PIP_ADAPTER_INFO;
   addr: AnsiString;
   addrStr: IP_ADDR_STRING;
-  BufLen: Cardinal;
+  BufLen: ULONG;
 begin
   BufLen := SizeOf(IP_ADAPTER_INFO);
   Result := GetAdaptersInfo(nil, BufLen);
@@ -91,7 +96,7 @@ var
   pAdapterInfo: PIP_ADAPTER_INFO;
   addr: AnsiString;
   addrStr: IP_ADDR_STRING;
-  BufLen: Cardinal;
+  BufLen: ULONG;
 begin
   BufLen := SizeOf(IP_ADAPTER_INFO);
   Result := GetAdaptersInfo(nil, BufLen);
@@ -151,7 +156,7 @@ end;
 function GetLocalMACAddressList(outSL: TStrings): DWORD;
 var
   pIfTable: PMIB_IFTABLE;
-  TableSize: Cardinal;
+  TableSize: ULONG;
   tmp: String;
   i, j: Integer;
 begin

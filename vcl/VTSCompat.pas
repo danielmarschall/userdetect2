@@ -119,7 +119,7 @@ begin
   end;
 {$ELSE}
 begin
-  result := OpenDialog.Execute;
+  result := SaveDialog.Execute;
 {$IFEND}
 end;
 
