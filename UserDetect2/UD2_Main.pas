@@ -62,7 +62,7 @@ type
     Button3: TButton;
     VersionLabel: TLabel;
     LoadedPluginsPopupMenu: TPopupMenu;
-    MenuItem1: TMenuItem;
+    CopyStatusCodeToClipboard: TMenuItem;
     Panel2: TPanel;
     Image2: TImage;
     DynamicTestGroupbox: TGroupBox;
@@ -85,7 +85,7 @@ type
     procedure ListViewCompare(Sender: TObject; Item1, Item2: TListItem; Data: Integer; var Compare: Integer);
     procedure Button3Click(Sender: TObject);
     procedure LoadedPluginsPopupMenuPopup(Sender: TObject);
-    procedure MenuItem1Click(Sender: TObject);
+    procedure CopyStatusCodeToClipboardClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure DynamicTestButtonClick(Sender: TObject);
   protected
@@ -294,8 +294,10 @@ begin
     for j := 0 to pl.DetectedIdentifications.Count-1 do
     begin
       ude := pl.DetectedIdentifications.Items[j] as TUD2IdentificationEntry;
+
       with IdentificationsListView.Items.Add do
       begin
+        Data := ude;
         Caption := pl.PluginName;
         if ude.DynamicDataUsed then
           SubItems.Add(ude.DynamicData)
@@ -367,6 +369,7 @@ begin
     pl := ud2.LoadedPlugins.Items[i] as TUD2Plugin;
     with LoadedPluginsListView.Items.Add do
     begin
+      Data := pl;
       Caption := pl.PluginDLL;
       SubItems.Add(pl.PluginVendor);
       SubItems.Add(pl.PluginName);
@@ -475,12 +478,17 @@ end;
 procedure TUD2MainForm.CopyTaskDefinitionExample1Click(Sender: TObject);
 var
   s: string;
+  ude: TUD2IdentificationEntry;
 begin
-  s := '; '+IdentificationsListView.Selected.Caption+#13#10+
-       IdentificationsListView.Selected.SubItems[0] + ':' + IdentificationsListView.Selected.SubItems[1] + '=calc.exe'+#13#10+
+  if IdentificationsListView.ItemIndex = -1 then exit;
+
+  ude := TUD2IdentificationEntry(IdentificationsListView.Selected.Data);
+  s := '; ' + ude.Plugin.PluginName + #13#10 +
+       UD2_CondToStr(ude.GetConditionString(false))+'=calc.exe'+#13#10+
        #13#10+
        '; Alternatively:'+#13#10+
-       IdentificationsListView.Selected.SubItems[2] + ':' + IdentificationsListView.Selected.SubItems[1] + '=calc.exe'+#13#10;
+       UD2_CondToStr(ude.GetConditionString(true))+'=calc.exe'+#13#10;
+
   Clipboard.AsText := s;
 end;
 
@@ -509,14 +517,17 @@ end;
 
 procedure TUD2MainForm.LoadedPluginsPopupMenuPopup(Sender: TObject);
 begin
-  MenuItem1.Enabled := LoadedPluginsListView.ItemIndex <> -1;
+  CopyStatusCodeToClipboard.Enabled := LoadedPluginsListView.ItemIndex <> -1;
 end;
 
-procedure TUD2MainForm.MenuItem1Click(Sender: TObject);
+procedure TUD2MainForm.CopyStatusCodeToClipboardClick(Sender: TObject);
 var
   s: string;
+  pl: TUD2Plugin;
 begin
-  s := '; ' + LoadedPluginsListView.Selected.SubItems.Strings[6];
+  if LoadedPluginsListView.ItemIndex = -1 then exit;
+  pl := TUD2Plugin(LoadedPluginsListView.Selected.Data);
+  s := (*'; ' +*) pl.IdentificationProcedureStatusCodeDescribed;
   Clipboard.AsText := s;
 end;
 

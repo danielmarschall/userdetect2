@@ -78,6 +78,7 @@ type
     property DynamicData: WideString read FDynamicData write FDynamicData;
     property IdentificationString: WideString read FIdentificationString;
     property Plugin: TUD2Plugin read FPlugin;
+    function GetConditionString(MethodnameAsGUID: boolean=false): TUD2TDFCondition;
     procedure GetIdNames(sl: TStrings);
     constructor Create(AIdentificationString: WideString; APlugin: TUD2Plugin);
   end;
@@ -330,6 +331,19 @@ begin
 
   FIdentificationString := AIdentificationString;
   FPlugin := APlugin;
+end;
+
+function TUD2IdentificationEntry.GetConditionString(MethodnameAsGUID: boolean=false): TUD2TDFCondition;
+begin
+  if MethodnameAsGUID then
+    Result.idMethodName := GUIDToString(Self.Plugin.PluginGUID)
+  else
+    Result.idMethodName := Self.Plugin.IdentificationMethodName;
+
+  Result.idStr := Self.IdentificationString;
+  Result.dynamicDataUsed := Self.DynamicDataUsed;
+  Result.dynamicData := Self.DynamicData;
+  Result.caseSensitive := false;
 end;
 
 { TUD2 }

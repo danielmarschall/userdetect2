@@ -1,9 +1,9 @@
 object UD2TaskPropertiesForm: TUD2TaskPropertiesForm
   Left = 318
   Top = 140
-  Width = 495
-  Height = 465
   Caption = 'Task properties'
+  ClientHeight = 444
+  ClientWidth = 481
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -13,8 +13,8 @@ object UD2TaskPropertiesForm: TUD2TaskPropertiesForm
   OldCreateOrder = False
   Position = poScreenCenter
   DesignSize = (
-    479
-    427)
+    481
+    444)
   PixelsPerInch = 96
   TextHeight = 13
   object Image1: TImage
@@ -32,8 +32,8 @@ object UD2TaskPropertiesForm: TUD2TaskPropertiesForm
   end
   object Label2: TLabel
     Left = 64
-    Top = 307
-    Width = 275
+    Top = 331
+    Width = 313
     Height = 13
     Anchors = [akLeft, akRight, akBottom]
     Caption = 'Following commands will be executed in your environment:'
@@ -41,19 +41,22 @@ object UD2TaskPropertiesForm: TUD2TaskPropertiesForm
   object ValueListEditor1: TValueListEditor
     Left = 64
     Top = 72
-    Width = 403
-    Height = 220
+    Width = 405
+    Height = 242
     Anchors = [akLeft, akTop, akRight, akBottom]
     Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goRowSelect, goThumbTracking]
     TabOrder = 3
     ColWidths = (
       205
-      192)
+      194)
+    RowHeights = (
+      18
+      18)
   end
   object LabeledEdit1: TLabeledEdit
     Left = 64
     Top = 24
-    Width = 227
+    Width = 217
     Height = 21
     Anchors = [akLeft, akTop, akRight]
     EditLabel.Width = 102
@@ -64,16 +67,16 @@ object UD2TaskPropertiesForm: TUD2TaskPropertiesForm
   end
   object ListBox1: TListBox
     Left = 64
-    Top = 323
-    Width = 403
-    Height = 89
+    Top = 347
+    Width = 405
+    Height = 78
     Anchors = [akLeft, akRight, akBottom]
     ItemHeight = 13
     TabOrder = 4
   end
   object Button1: TButton
-    Left = 304
-    Top = 8
+    Left = 306
+    Top = 9
     Width = 163
     Height = 25
     Anchors = [akTop, akRight]
@@ -82,8 +85,8 @@ object UD2TaskPropertiesForm: TUD2TaskPropertiesForm
     OnClick = Button1Click
   end
   object Button2: TButton
-    Left = 304
-    Top = 40
+    Left = 306
+    Top = 41
     Width = 163
     Height = 25
     Anchors = [akTop, akRight]
