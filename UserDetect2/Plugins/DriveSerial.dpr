@@ -89,7 +89,7 @@ begin
 
     CoInitialize(nil);
     try
-      stIdentifier := GetDiskSerial(driveletter); // driveletter must be upper case
+      stIdentifier := GetDriveSerial(driveletter); // driveletter must be upper case
     finally
       CoUninitialize;
     end;

@@ -42,6 +42,7 @@ function CheckBoolParam(idx: integer; name: string): boolean;
 function IndexOf_CS(aStrings: TStrings; aToken: string): Integer;
 function UD2_GetThreadErrorMode: DWORD;
 function UD2_SetThreadErrorMode(dwNewMode: DWORD; lpOldMode: LPDWORD): BOOL;
+function GetFileVersion(const FileName: string=''): string;
 
 implementation
 
@@ -422,6 +423,54 @@ begin
     if result <> '' then result := result + glue;
     result := result + ary[i];
   end;
+end;
+
+function GetFileVersion(const FileName: string=''): string;
+var
+  lpVerInfo: pointer;
+  rVerValue: PVSFixedFileInfo;
+  dwInfoSize: cardinal;
+  dwValueSize: cardinal;
+  dwDummy: cardinal;
+  lpstrPath: pchar;
+  a, b, c, d: word;
+resourcestring
+  LNG_NO_VERSION = 'No version specification';
+begin
+  if Trim(FileName) = EmptyStr then
+    lpstrPath := pchar(ParamStr(0))
+  else
+    lpstrPath := pchar(FileName);
+
+  dwInfoSize := GetFileVersionInfoSize(lpstrPath, dwDummy);
+
+  if dwInfoSize = 0 then
+  begin
+    Result := LNG_NO_VERSION;
+    Exit;
+  end;
+
+  GetMem(lpVerInfo, dwInfoSize);
+  try
+    GetFileVersionInfo(lpstrPath, 0, dwInfoSize, lpVerInfo);
+    VerQueryValue(lpVerInfo, '', pointer(rVerValue), dwValueSize);
+
+    with rVerValue^ do
+    begin
+      a := dwFileVersionMS shr 16;
+      b := dwFileVersionMS and $FFFF;
+      c := dwFileVersionLS shr 16;
+      d := dwFileVersionLS and $FFFF;
+
+      Result := IntToStr(a);
+      if (b <> 0) or (c <> 0) or (d <> 0) then Result := Result + '.' + IntToStr(b);
+      if (c <> 0) or (d <> 0) then Result := Result + '.' + IntToStr(c);
+      if (d <> 0) then Result := Result + '.' + IntToStr(d);
+    end;
+  finally
+    FreeMem(lpVerInfo, dwInfoSize);
+  end;
+
 end;
 
 end.

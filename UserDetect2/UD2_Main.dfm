@@ -1,7 +1,7 @@
 object UD2MainForm: TUD2MainForm
   Left = 202
   Top = 139
-  ActiveControl = TasksListView
+  ActiveControl = Memo1
   Caption = 'ViaThinkSoft UserDetect2'
   ClientHeight = 481
   ClientWidth = 881
@@ -22,7 +22,7 @@ object UD2MainForm: TUD2MainForm
     Top = 0
     Width = 881
     Height = 481
-    ActivePage = TasksTabSheet
+    ActivePage = TabSheet5
     Align = alClient
     TabOrder = 0
     object TasksTabSheet: TTabSheet
@@ -664,9 +664,9 @@ object UD2MainForm: TUD2MainForm
       object VersionLabel: TLabel
         Left = 104
         Top = 64
-        Width = 15
+        Width = 24
         Height = 13
-        Caption = '2.3'
+        Caption = '2.3.1'
       end
       object Memo1: TMemo
         Left = 264
@@ -2228,7 +2228,7 @@ object UD2MainForm: TUD2MainForm
     Left = 560
     Top = 32
     Bitmap = {
-      494C010101000400100020002000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C0101010004001C0020002000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000800000002000000001002000000000000040
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

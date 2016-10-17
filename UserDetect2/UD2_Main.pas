@@ -611,6 +611,8 @@ procedure TUD2MainForm.FormCreate(Sender: TObject);
 begin
   // To avoid accidental change of the default tab from the IDE VCL Designer
   PageControl1.ActivePage := TasksTabSheet;
+
+  VersionLabel.Caption := GetFileVersion(ParamStr(0));
 end;
 
 procedure TUD2MainForm.DynamicTestButtonClick(Sender: TObject);
@@ -620,7 +622,7 @@ var
   newStuff: boolean;
   errors: TStrings;
 resourcestring
-  LNG_DETECTED_DYNAMICS = 'The plugin returns following identification strings:';
+  LNG_DETECTED_DYNAMICS = 'The plugin returned following identification strings:';
   LNG_NOTHING_DETECTED = 'The plugin did not send any identification strings.';
   LNG_STATUS_RETURNED = 'The plugin sent following status in reply to your request:';
   LNG_ERROR_RETURNED = 'The dynamic plugin could not load. The plugin sent following error messages:';
