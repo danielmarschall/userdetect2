@@ -88,6 +88,8 @@ type
     procedure CopyStatusCodeToClipboardClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure DynamicTestButtonClick(Sender: TObject);
+  private
+    procedure ConvertFirstIconToGray;
   protected
     ud2: TUD2;
     procedure LoadTaskList;
@@ -129,6 +131,7 @@ begin
 
     // result := ImageList.AddIcon(ico);
     result := AddTransparentIconToImageList(ImageList, icon);
+    AddTransparentIconToImageList(ImageList, icon, true)
   finally
     icon.Free;
   end;
@@ -186,6 +189,7 @@ var
   ShortTaskName, iconString: string;
   iconIndex: integer;
   obj: TUD2ListViewEntry;
+  cmds: TUD2CommandArray;
 begin
   for i := 0 to TasksListView.Items.Count-1 do
   begin
@@ -214,6 +218,13 @@ begin
         begin
           TasksListView.Items.Item[TasksListView.Items.Count-1].ImageIndex := iconIndex;
         end;
+      end;
+
+      SetLength(cmds, 0);
+      cmds := ud2.GetCommandList(obj.ShortTaskName);
+      if Length(cmds) = 0 then
+      begin
+        TasksListView.Items.Item[TasksListView.Items.Count-1].ImageIndex := TasksListView.Items.Item[TasksListView.Items.Count-1].ImageIndex + 1;
       end;
     end;
   finally
@@ -510,6 +521,35 @@ begin
   if ListView.CurSortedDesc then Compare := -Compare;
 end;
 
+procedure TUD2MainForm.ConvertFirstIconToGray;
+var
+  buffer, mask: TBitmap;
+  x, y: integer;
+begin
+  buffer := TBitmap.Create;
+  mask := TBitmap.Create;
+  try
+    TasksImageList.GetBitmap(0, buffer);
+    for x := 0 to buffer.Width - 1 do
+    begin
+      for y := 0 to buffer.Height - 1 do
+      begin
+        buffer.Canvas.Pixels[x, y] := ToGray(buffer.Canvas.Pixels[x, y]);
+      end;
+    end;
+
+    // create a mask for the icon.
+    mask.Assign(buffer);
+    mask.Canvas.Brush.Color := buffer.Canvas.Pixels[0, buffer.Height -1];
+    mask.Monochrome := true;
+
+    TasksImageList.Add(buffer, mask);
+  finally
+    buffer.Free;
+    mask.Free;
+  end;
+end;
+
 procedure TUD2MainForm.Button3Click(Sender: TObject);
 begin
   VTS_CheckUpdates('userdetect2', VersionLabel.Caption);
@@ -613,6 +653,8 @@ begin
   PageControl1.ActivePage := TasksTabSheet;
 
   VersionLabel.Caption := GetFileVersion(ParamStr(0));
+
+  ConvertFirstIconToGray;
 end;
 
 procedure TUD2MainForm.DynamicTestButtonClick(Sender: TObject);
