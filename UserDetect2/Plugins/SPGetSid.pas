@@ -176,7 +176,7 @@ function SIDToString(ASID: PSID): string;
 type
   TFuncConvertSidToStringSid = function(Sid: PSID; out StringSid: PChar): BOOL; stdcall;
 var
-  dllHandle: Cardinal;
+  dllHandle: HMODULE;
   fConvertSidToStringSid: TFuncConvertSidToStringSid;
   StringSid : PChar;
 begin
