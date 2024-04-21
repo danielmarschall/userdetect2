@@ -47,10 +47,10 @@ function GetFileVersion(const FileName: string=''): string;
 implementation
 
 uses
-  idhttp, Forms;
+  wininet, Forms;
 
 function SplitString(const aSeparator, aString: string; aMax: Integer = 0): TArrayOfString;
-// http://stackoverflow.com/a/2626991/3544341
+// https://stackoverflow.com/a/2626991/3544341
 var
   i, strt, cnt: Integer;
   sepLen: Integer;
@@ -139,7 +139,7 @@ begin
 end;
 
 function ExpandEnvStr(const szInput: string): string;
-// http://stackoverflow.com/a/2833147/3544341
+// https://stackoverflow.com/a/2833147/3544341
 const
   MAXSIZE = 32768;
 begin
@@ -196,12 +196,12 @@ begin
 end;
 
 procedure UD2_RunCMD(cmd: TUD2Command);
-// Discussion: http://stackoverflow.com/questions/32802679/acceptable-replacement-for-winexec/32804669#32804669
-// Version 1: http://pastebin.com/xQjDmyVe
+// Discussion: https://stackoverflow.com/questions/32802679/acceptable-replacement-for-winexec/32804669#32804669
+// Version 1: https://pastebin.com/xQjDmyVe
 // --> CreateProcess + ShellExecuteEx
 // --> Problem: Run-In-Same-Directory functionality is not possible
 //              (requires manual command and argument separation)
-// Version 2: http://pastebin.com/YpUmF5rd
+// Version 2: https://pastebin.com/YpUmF5rd
 // --> Splits command and arguments manually, and uses ShellExecute
 // --> Problem: error handling wrong
 // --> Problem: Run-In-Same-Directory functionality is not implemented
@@ -290,6 +290,7 @@ begin
   {$ENDIF}
 end;
 
+(*
 function GetHTML(const url: string): string;
 var
   idhttp :Tidhttp;
@@ -300,6 +301,86 @@ begin
   finally
     idhttp.Free;
   end;
+end;
+*)
+// https://www.delphipraxis.net/post43515.html , fixed , works for Delphi 12 Athens
+function GetHTML(AUrl: string): RawByteString;
+var
+  databuffer : array[0..4095] of ansichar; // SIC! ansichar!
+  ResStr : ansistring; // SIC! ansistring
+  hSession, hfile: hInternet;
+  dwindex,dwcodelen,dwread,dwNumber: cardinal;
+  dwcode : array[1..20] of char;
+  res    : pchar;
+  Str    : pansichar; // SIC! pansichar
+begin
+  ResStr:='';
+  if (system.pos('http://',lowercase(AUrl))=0) and
+     (system.pos('https://',lowercase(AUrl))=0) then
+     AUrl:='http://'+AUrl;
+
+  // Hinzugefügt
+  if Assigned(Application) then Application.ProcessMessages;
+
+  hSession:=InternetOpen('InetURL:/1.0',
+                         INTERNET_OPEN_TYPE_PRECONFIG,
+                         nil,
+                         nil,
+                         0);
+  if assigned(hsession) then
+  begin
+    // Hinzugefügt
+    if Assigned(Application) then application.ProcessMessages;
+
+    hfile:=InternetOpenUrl(
+           hsession,
+           pchar(AUrl),
+           nil,
+           0,
+           INTERNET_FLAG_RELOAD,
+           0);
+    dwIndex  := 0;
+    dwCodeLen := 10;
+
+    // Hinzugefügt
+    if Assigned(Application) then application.ProcessMessages;
+
+    HttpQueryInfo(hfile,
+                  HTTP_QUERY_STATUS_CODE,
+                  @dwcode,
+                  dwcodeLen,
+                  dwIndex);
+    res := pchar(@dwcode);
+    dwNumber := sizeof(databuffer)-1;
+    if (res ='200') or (res = '302') then
+    begin
+      while (InternetReadfile(hfile,
+                              @databuffer,
+                              dwNumber,
+                              DwRead)) do
+      begin
+
+        // Hinzugefügt
+        if Assigned(Application) then application.ProcessMessages;
+
+        if dwRead =0 then
+          break;
+        databuffer[dwread]:=#0;
+        Str := pansichar(@databuffer);
+        resStr := resStr + Str;
+      end;
+    end
+    else
+      ResStr := 'Status:'+AnsiString(res);
+    if assigned(hfile) then
+      InternetCloseHandle(hfile);
+  end;
+
+  // Hinzugefügt
+  if Assigned(Application) then application.ProcessMessages;
+
+  InternetCloseHandle(hsession);
+  Result := resStr;
 end;
 
 procedure VTS_CheckUpdates(VTSID, CurVer: string);
@@ -313,20 +394,20 @@ resourcestring
   LNG_NEW_VERSION = 'A new version is available. Do you want to download it now?';
   LNG_NO_UPDATE = 'You already have the newest program version.';
 var
-  status: string;
+  status: RawByteString;
 begin
-  status := GetHTML('http://www.viathinksoft.de/update/?id='+VTSID);
+  status := GetHTML('https://www.viathinksoft.de/update/?id='+VTSID);
   if Copy(status, 0, 7) = 'Status:' then
   begin
     MessageDlg(LNG_DOWNLOAD_ERR, mtError, [mbOK], 0);
   end
   else
   begin
-    if status <> CurVer then
+    if string(status) <> CurVer then
     begin
       if MessageDlg(LNG_NEW_VERSION, mtConfirmation, mbYesNoCancel, 0) = ID_YES then
       begin
-        shellexecute(application.handle, 'open', pchar('http://www.viathinksoft.de/update/?id=@'+VTSID), '', '', SW_Normal);
+        shellexecute(application.handle, 'open', pchar('https://www.viathinksoft.de/update/?id=@'+VTSID), '', '', SW_Normal);
       end;
     end
     else
