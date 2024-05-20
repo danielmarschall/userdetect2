@@ -97,7 +97,7 @@
         <Manifest_File>$(BDS)\bin\default_app.manifest</Manifest_File>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1)'!=''">
-        <VerInfo_Keys>CompanyName=ViaThinkSoft;FileDescription=UserDetect2;FileVersion=2.3.2.0;InternalName=UD2;LegalCopyright=(C) 2015-2017 ViaThinkSoft;LegalTrademarks=;OriginalFilename=UserDetect2.exe;ProductName=UserDetect2;ProductVersion=2.3.2.0;Project leader=Daniel Marschall - www.daniel-marschall.de;Website=www.viathinksoft.de</VerInfo_Keys>
+        <VerInfo_Keys>CompanyName=ViaThinkSoft;FileDescription=UserDetect2;FileVersion=2.3.3.0;InternalName=UD2;LegalCopyright=(C) 2015-2017 ViaThinkSoft;LegalTrademarks=;OriginalFilename=UserDetect2.exe;ProductName=UserDetect2;ProductVersion=2.3.3.0;Project leader=Daniel Marschall - www.daniel-marschall.de;Website=www.viathinksoft.de</VerInfo_Keys>
         <VerInfo_Release>2</VerInfo_Release>
         <DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>
         <DCC_DebugInformation>0</DCC_DebugInformation>
@@ -124,6 +124,7 @@
         <VerInfo_Keys>CompanyName=;FileVersion=2.2.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductVersion=1.0.0.0;Comments=;ProgramID=com.embarcadero.$(MSBuildProjectName);FileDescription=$(MSBuildProjectName);ProductName=$(MSBuildProjectName)</VerInfo_Keys>
         <AppEnableRuntimeThemes>true</AppEnableRuntimeThemes>
         <AppDPIAwarenessMode>PerMonitor</AppDPIAwarenessMode>
+        <BT_BuildType>Debug</BT_BuildType>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2_Win64)'!=''">
         <AppDPIAwarenessMode>PerMonitorV2</AppDPIAwarenessMode>

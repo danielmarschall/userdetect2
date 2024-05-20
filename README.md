@@ -4,6 +4,8 @@
 
 UserDetect2 is a program that allows the user to execute different programs depending on their current environment (e.g. MAC addresses, user name or computer name), so that a single executable file, e.g. shared over a network drive, a flash drive or external hard disk, can perform tasks for different work stations. The environment identifications can be extended by plugins.
 
+Note: "testuser" is the predecessor of UserDetect and also included in this GitHub repo.
+
 ## Usage example
 
 You have an external hard disk which you use for a daily backup with a backup tool (e.g. Microsoft RoboCopy).

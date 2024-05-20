@@ -11,11 +11,9 @@ object UD2MainForm: TUD2MainForm
   Font.Height = -11
   Font.Name = 'MS Sans Serif'
   Font.Style = []
-  OldCreateOrder = False
   Position = poScreenCenter
   OnCreate = FormCreate
   OnDestroy = FormDestroy
-  PixelsPerInch = 96
   TextHeight = 13
   object PageControl1: TPageControl
     Left = 0
@@ -25,6 +23,8 @@ object UD2MainForm: TUD2MainForm
     ActivePage = TabSheet5
     Align = alClient
     TabOrder = 0
+    ExplicitWidth = 877
+    ExplicitHeight = 480
     object TasksTabSheet: TTabSheet
       Caption = 'Tasks'
       object TasksListView: TVTSListView
@@ -666,7 +666,7 @@ object UD2MainForm: TUD2MainForm
         Top = 64
         Width = 24
         Height = 13
-        Caption = '2.3.2'
+        Caption = '2.3.3'
       end
       object Memo1: TMemo
         Left = 264
@@ -2134,6 +2134,8 @@ object UD2MainForm: TUD2MainForm
         ScrollBars = ssBoth
         TabOrder = 0
         WordWrap = False
+        ExplicitWidth = 591
+        ExplicitHeight = 434
       end
       object Button3: TButton
         Left = 48
@@ -2215,7 +2217,7 @@ object UD2MainForm: TUD2MainForm
     end
   end
   object OpenDialog1: TOpenDialog
-    DefaultExt = '.ini'
+    DefaultExt = 'ini'
     Filter = 'Task Definition File (*.ini)|*.ini|Any file (*.*)|*.*'
     Options = [ofHideReadOnly, ofFileMustExist, ofEnableSizing]
     Title = 'Please select the Task Definition File'
@@ -2228,7 +2230,7 @@ object UD2MainForm: TUD2MainForm
     Left = 560
     Top = 32
     Bitmap = {
-      494C010101000400240020002000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010101000400040020002000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000800000002000000001002000000000000040
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -2764,7 +2766,7 @@ object UD2MainForm: TUD2MainForm
       000000000000}
   end
   object SaveDialog1: TSaveDialog
-    DefaultExt = '.ini'
+    DefaultExt = 'ini'
     Filter = 'Task Definition File (*.ini)|*.ini|Any file (*.*)|*.*'
     Options = [ofOverwritePrompt, ofHideReadOnly, ofEnableSizing]
     Left = 488

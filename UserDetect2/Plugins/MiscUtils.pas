@@ -67,9 +67,10 @@ end;
 
 procedure EnvironmentStringsToStrings(outSL: TStrings);
 var
-  DosEnv: PChar;
+  DosEnv, DosEnvOrig: PChar;
 begin
   DosEnv := GetEnvironmentStrings;
+  DosEnvOrig := DosEnv;
   try
     while DosEnv^ <> #0 do
     begin
@@ -77,7 +78,7 @@ begin
       Inc(DosEnv, lStrLen(DosEnv) + 1);
     end;
   finally
-    FreeEnvironmentStrings(DosEnv);
+    FreeEnvironmentStrings(DosEnvOrig);
   end;
 end;
 
