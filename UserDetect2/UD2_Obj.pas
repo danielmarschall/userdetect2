@@ -721,7 +721,7 @@ var
   begin
     if Assigned(fDescribeOwnStatusCodeW) then
     begin
-      ZeroMemory(@buf, cchBufferSize);
+      ZeroMemory(@buf, cchBufferSize*SizeOf(WideChar));
       ret := fDescribeOwnStatusCodeW(@buf, cchBufferSize, statusCode, lngID);
       if ret then
       begin
@@ -930,7 +930,7 @@ begin
           Exit;
         end;
 
-        ZeroMemory(@buf, cchBufferSize);
+        ZeroMemory(@buf, cchBufferSize*SizeOf(WideChar));
         statusCode := fPluginNameW(@buf, cchBufferSize, lngID);
              if statusCode.wCategory = UD2_STATUSCAT_SUCCESS   then Plugin.FPluginName := PWideChar(@buf)
         else if statusCode.wCategory = UD2_STATUSCAT_NOT_AVAIL then Plugin.FPluginName := ''
@@ -940,7 +940,7 @@ begin
           Exit;
         end;
 
-        ZeroMemory(@buf, cchBufferSize);
+        ZeroMemory(@buf, cchBufferSize*SizeOf(WideChar));
         statusCode := fPluginVendorW(@buf, cchBufferSize, lngID);
              if statusCode.wCategory = UD2_STATUSCAT_SUCCESS   then Plugin.FPluginVendor := PWideChar(@buf)
         else if statusCode.wCategory = UD2_STATUSCAT_NOT_AVAIL then Plugin.FPluginVendor := ''
@@ -950,7 +950,7 @@ begin
           Exit;
         end;
 
-        ZeroMemory(@buf, cchBufferSize);
+        ZeroMemory(@buf, cchBufferSize*SizeOf(WideChar));
         statusCode := fPluginVersionW(@buf, cchBufferSize, lngID);
              if statusCode.wCategory = UD2_STATUSCAT_SUCCESS   then Plugin.FPluginVersion := PWideChar(@buf)
         else if statusCode.wCategory = UD2_STATUSCAT_NOT_AVAIL then Plugin.FPluginVersion := ''
@@ -960,7 +960,7 @@ begin
           Exit;
         end;
 
-        ZeroMemory(@buf, cchBufferSize);
+        ZeroMemory(@buf, cchBufferSize*SizeOf(WideChar));
         statusCode := fIdentificationMethodNameW(@buf, cchBufferSize);
              if statusCode.wCategory = UD2_STATUSCAT_SUCCESS   then Plugin.FIdentificationMethodName := PWideChar(@buf)
         else if statusCode.wCategory = UD2_STATUSCAT_NOT_AVAIL then Plugin.FIdentificationMethodName := ''
@@ -970,7 +970,7 @@ begin
           Exit;
         end;
 
-        ZeroMemory(@buf, cchBufferSize);
+        ZeroMemory(@buf, cchBufferSize*SizeOf(WideChar));
         statusCode := UD2_STATUS_FAILURE_NO_RETURNED_VALUE; // This status will be used when the DLL does not return anything (which is an error by the developer)
         if useDynamicData then
         begin
